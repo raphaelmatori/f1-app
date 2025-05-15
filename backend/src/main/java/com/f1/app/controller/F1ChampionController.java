@@ -4,6 +4,7 @@ import com.f1.app.dto.DriverDTO;
 import com.f1.app.dto.RaceDTO;
 import com.f1.app.dto.SeasonDTO;
 import com.f1.app.service.F1ChampionService;
+import com.f1.app.service.DataSyncService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,14 @@ import java.util.List;
 public class F1ChampionController {
     
     private final F1ChampionService f1ChampionService;
+    private final DataSyncService dataSyncService;
+    
+    @PostMapping("/sync")
+    @Operation(summary = "Manually trigger data synchronization")
+    public ResponseEntity<String> syncData() {
+        dataSyncService.syncData();
+        return ResponseEntity.ok("Data synchronization started");
+    }
     
     @GetMapping("/seasons")
     @Operation(summary = "Get all F1 seasons with champions")
