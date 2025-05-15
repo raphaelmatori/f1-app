@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: f1_mysql
+    environment:
+      MYSQL_DATABASE: f1_champions
+      MYSQL_USER: f1_user
+      MYSQL_PASSWORD: f1_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "f1_user", "-pf1_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - f1_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: f1_backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: f1_champions
+      MYSQL_USER: f1_user
+      MYSQL_PASSWORD: f1_password
+    ports:
+      - "8080:8080"
+    networks:
+      - f1_network
+
+volumes:
+  mysql_data:
+    name: f1_mysql_data
+
+networks:
+  f1_network:
+    name: f1_network 
