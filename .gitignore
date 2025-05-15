@@ -1,0 +1,77 @@
+# -------------------------------
+# Gradle
+# -------------------------------
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Gradle cache and logs
+.gradle/
+build/
+out/
+
+# Gradle Wrapper jar
+gradle-wrapper.jar
+
+# -------------------------------
+# Java / Spring Boot
+# -------------------------------
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.sw?
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# -------------------------------
+# Angular
+# -------------------------------
+node_modules/
+dist/
+.tmp/
+.angular/
+coverage/
+
+# npm/yarn logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Angular build cache
+.cache/
+.next/
+output/
+
+# -------------------------------
+# Local configs
+# -------------------------------
+.env
+*.local
+
+# -------------------------------
+# Logs / temp
+# -------------------------------
+*.log
+logs/
+*.tmp
+*.swp
+
+# -------------------------------
+# Others
+# -------------------------------
+*.bak
+*.orig
+*.rej
