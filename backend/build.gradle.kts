@@ -11,6 +11,12 @@ java {
 	sourceCompatibility = JavaVersion.VERSION_17
 }
 
+configurations {
+	compileOnly {
+		extendsFrom(configurations.annotationProcessor.get())
+	}
+}
+
 repositories {
 	mavenCentral()
 }
@@ -19,10 +25,13 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
+	implementation("org.springframework.boot:spring-boot-starter-aop")
+	implementation("org.springframework.retry:spring-retry:2.0.5")
+	implementation("org.springframework:spring-aspects")
 	implementation("mysql:mysql-connector-java:8.0.33")
-	implementation("org.projectlombok:lombok")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
 	
+	compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")
 	
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -31,4 +40,9 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+tasks.withType<JavaCompile> {
+	options.compilerArgs.add("-parameters")
+	options.annotationProcessorPath = configurations.annotationProcessor.get()
 }

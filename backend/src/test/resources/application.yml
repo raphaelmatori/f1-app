@@ -33,4 +33,4 @@ logging:
 # API Configuration
 api:
   ergast:
-    baseUrl: https://api.jolpi.ca/ergast 
+    baseUrl: https://api.jolpi.ca/ergast
