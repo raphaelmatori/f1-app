@@ -3,22 +3,24 @@ package com.f1.app.service;
 import com.f1.app.dto.ergast.ErgastResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.http.ResponseEntity;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ErgastApiService {
     
     @Value("${api.ergast.baseUrl}")
     private String baseUrl;
     
     private final RestTemplate restTemplate;
-    
+
+    public ErgastApiService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
     public ErgastResponse getSeasonList() {
         String url = baseUrl + "/f1/seasons.json";
         log.debug("Calling Ergast API: {}", url);

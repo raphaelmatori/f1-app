@@ -15,9 +15,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1")
-@RequiredArgsConstructor
 @Tag(name = "F1 Champions API", description = "API endpoints for F1 World Champions data")
 @CrossOrigin(origins = "http://localhost:4200")
+@RequiredArgsConstructor
 public class F1ChampionController {
     
     private final F1ChampionService f1ChampionService;
