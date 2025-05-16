@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.client.RestTemplate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 
 @Slf4j
 @Service
@@ -22,6 +23,7 @@ public class ErgastApiService {
 
     private final ChampionRepository championRepository;
 
+    @Cacheable(value = "champions", key = "#year")
     public ResponseEntity<Champion> fetchWorldChampion(Integer year) {
         String url = String.format("%s/%d/driverstandings/1.json", baseUrl, year);
         log.info("Fetching world champion for year: {}", year);
