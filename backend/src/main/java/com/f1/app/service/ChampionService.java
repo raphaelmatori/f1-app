@@ -3,7 +3,6 @@ package com.f1.app.service;
 import com.f1.app.model.Champion;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ChampionCacheService {
+public class ChampionService {
 
     private static final String CACHE_NAME = "champions";
     

@@ -1,6 +1,6 @@
 package com.f1.app.service;
 
-import com.f1.app.dto.ErgastResponse;
+import com.f1.app.dto.ErgastChampionResponse;
 import com.f1.app.model.Champion;
 import com.f1.app.repository.ChampionRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,10 +29,10 @@ public class ErgastApiService {
         log.info("Fetching world champion for year: {}", year);
         
         try {
-            ErgastResponse response = restTemplate.getForObject(url, ErgastResponse.class);
+            ErgastChampionResponse response = restTemplate.getForObject(url, ErgastChampionResponse.class);
             
             if (response != null && 
-                response.getMrData() != null && 
+                response.getMrData() != null &&
                 response.getMrData().getStandingsTable() != null &&
                 response.getMrData().getStandingsTable().getStandingsLists() != null &&
                 response.getMrData().getStandingsTable().getStandingsLists().length > 0) {

@@ -1,7 +1,7 @@
 package com.f1.app.controller;
 
 import com.f1.app.model.Champion;
-import com.f1.app.service.ChampionCacheService;
+import com.f1.app.service.ChampionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "http://localhost:4200")
 public class ChampionController {
 
-    private final ChampionCacheService championCacheService;
+    private final ChampionService championCacheService;
     
     @GetMapping("/champions/{year}")
     public ResponseEntity<Champion> getChampion(@PathVariable Integer year) {
