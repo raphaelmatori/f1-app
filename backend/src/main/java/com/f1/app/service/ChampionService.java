@@ -39,11 +39,24 @@ public class ChampionService {
 
     private Optional<Champion> getFromRedisCache(Integer year) {
         return Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
-                .map(cache -> cache.get(year, Champion.class));
+                .map(cache -> cache.get(year))
+                .map(cacheValue -> {
+                    if (cacheValue != null && cacheValue.get() instanceof Champion) {
+                        return (Champion) cacheValue.get();
+                    }
+                    return null;
+                });
     }
 
     private void putInRedisCache(Integer year, Champion champion) {
         Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
-                .ifPresent(cache -> cache.put(year, champion));
+                .ifPresent(cache -> {
+                    try {
+                        cache.put(year, champion);
+                        log.debug("Successfully cached champion for year {}", year);
+                    } catch (Exception e) {
+                        log.error("Failed to cache champion for year {}: {}", year, e.getMessage());
+                    }
+                });
     }
 } 
