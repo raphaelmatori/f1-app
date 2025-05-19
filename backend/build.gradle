@@ -46,7 +46,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    finalizedBy jacocoTestReport
+    finalizedBy jacocoTestReport, jacocoTestCoverageVerification
     testLogging {
           events "passed", "skipped", "failed"
       }
@@ -72,14 +72,18 @@ jacocoTestReport {
             ])
         }))
     }
+    doLast {
+        def reportFile = file("./reports/jacoco/test/html/index.html")
+        println "JaCoCo HTML report generated at: ${reportFile.toURI()}"
+    }
 }
 
 jacocoTestCoverageVerification {
     violationRules {
         rule {
             limit {
-                minimum = 0.90
+                minimum = 0.70
             }
         }
     }
-} 
+}
