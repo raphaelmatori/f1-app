@@ -2,6 +2,13 @@ package com.f1.app.controller;
 
 import com.f1.app.model.Race;
 import com.f1.app.service.RaceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -13,12 +20,35 @@ import java.util.List;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:4200")
+@Tag(name = "Races", description = "F1 Race Results API")
 public class RaceController {
 
     private final RaceService raceService;
     
+    @Operation(
+        summary = "Get races by year",
+        description = "Retrieve all Formula 1 races and their results for a specific year"
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Races found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Race.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "No races found for the specified year",
+            content = @Content
+        )
+    })
     @GetMapping("/races/{year}")
-    public ResponseEntity<List<Race>> getRacesByYear(@PathVariable Integer year) {
+    public ResponseEntity<List<Race>> getRacesByYear(
+        @Parameter(description = "Year to get races for (e.g. 2023)")
+        @PathVariable Integer year
+    ) {
         List<Race> races = raceService.getRacesByYear(year);
         return races.isEmpty() 
             ? ResponseEntity.notFound().build()

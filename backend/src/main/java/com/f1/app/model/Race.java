@@ -11,11 +11,9 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -23,13 +21,20 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = "results")
+@EqualsAndHashCode(exclude = "results")
 @Table(name = "races")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Race implements Serializable {
@@ -49,16 +54,21 @@ public class Race implements Serializable {
     @Embedded
     private Circuit circuit;
     
-    @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonManagedReference
     private List<RaceResult> results = new ArrayList<>();
     
     public void addResult(RaceResult result) {
-        if (results == null) {
-            results = new ArrayList<>();
-        }
         results.add(result);
         result.setRace(this);
+    }
+    
+    public void setResults(List<RaceResult> results) {
+        this.results.clear();
+        if (results != null) {
+            results.forEach(this::addResult);
+        }
     }
     
     @PrePersist
@@ -69,11 +79,11 @@ public class Race implements Serializable {
         }
     }
     
-    @Embeddable
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @Embeddable
     public static class Circuit implements Serializable {
         private static final long serialVersionUID = 1L;
         

@@ -1,129 +1,134 @@
 package com.f1.app.service;
 
 import com.f1.app.dto.ErgastRaceResponse;
-import com.f1.app.dto.ErgastRaceResponse.RaceData;
+import com.f1.app.dto.ErgastRaceResponse.*;
 import com.f1.app.model.Race;
 import com.f1.app.model.RaceResult;
 import com.f1.app.repository.RaceRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class RaceService {
 
-    private static final int PAGE_SIZE = 100;
+    private static final Logger log = LoggerFactory.getLogger(RaceService.class);
     private static final String CACHE_NAME = "races";
-
-    @Value("${ergast.api.baseUrl}")
-    private String baseUrl;
-
-    private final RestTemplate restTemplate;
+    private final String baseUrl;
     private final RaceRepository raceRepository;
     private final RedisCacheManager redisCacheManager;
+    private final ErgastApiService ergastApiService;
+
+    @Autowired
+    public RaceService(
+            @Value("${api.ergast.baseUrl}") String baseUrl,
+            RaceRepository raceRepository,
+            RedisCacheManager redisCacheManager,
+            ErgastApiService ergastApiService) {
+        this.baseUrl = baseUrl;
+        this.raceRepository = raceRepository;
+        this.redisCacheManager = redisCacheManager;
+        this.ergastApiService = ergastApiService;
+    }
 
     public List<Race> getRacesByYear(Integer year) {
-        // Try Redis cache first
-        Optional<List<Race>> redisCacheResult = getFromRedisCache(year);
-        if (redisCacheResult.isPresent()) {
-            log.debug("Redis cache hit for year: {}", year);
-            return redisCacheResult.get();
+        try {
+            // Try Redis cache first
+            Optional<List<Race>> redisCacheResult = getFromRedisCache(year);
+            if (redisCacheResult.isPresent()) {
+                log.debug("Redis cache hit for year: {}", year);
+                return redisCacheResult.get();
+            }
+        } catch (Exception e) {
+            log.error("Error accessing Redis cache: {}", e.getMessage());
+            // Continue with database lookup
         }
 
         // Then check database
-        List<Race> cachedRaces = raceRepository.findBySeason(year);
+        List<Race> cachedRaces = new ArrayList<>();
+        try {
+            cachedRaces = raceRepository.findBySeason(year);
+        } catch (Exception e) {
+            log.error("Database error while fetching races for year {}: {}", year, e.getMessage());
+            // Fail gracefully and continue to API fallback
+        }
         if (!cachedRaces.isEmpty()) {
             log.debug("Found races for year {} in database", year);
-            putInRedisCache(year, cachedRaces);
+            try {
+                putInRedisCache(year, cachedRaces);
+            } catch (Exception e) {
+                log.error("Failed to update Redis cache: {}", e.getMessage());
+                // Continue with database results
+            }
             return cachedRaces;
         }
 
-        // If not in database, fetch from API with pagination
-        log.info("Fetching races for year {} from API", year);
-        List<Race> allRaces = new ArrayList<>();
-        int offset = 0;
-        int total;
-
-        do {
-            String url = String.format("%s/%d/results.json?limit=%d&offset=%d", baseUrl, year, PAGE_SIZE, offset);
-            log.debug("Fetching page with offset {} from URL: {}", offset, url);
-            
-            ResponseEntity<ErgastRaceResponse> response = restTemplate.getForEntity(url, ErgastRaceResponse.class);
-            if (response.getBody() == null || response.getBody().getMrData() == null) {
-                break;
-            }
-
-            ErgastRaceResponse.MRData mrData = response.getBody().getMrData();
-            total = Integer.parseInt(mrData.getTotal());
-
-            if (mrData.getRaceTable() != null && mrData.getRaceTable().getRaces() != null) {
-                List<Race> races = mrData.getRaceTable().getRaces()
-                    .stream()
-                    .map(this::mapToRace)
-                    .collect(Collectors.toList());
-                
-                allRaces.addAll(races);
-                log.debug("Fetched {} races from offset {}", races.size(), offset);
-            }
-
-            offset += PAGE_SIZE;
-        } while (offset < total);
-
-        if (!allRaces.isEmpty()) {
-            // Save all fetched races to database
-            allRaces = raceRepository.saveAll(allRaces);
-            log.info("Saved total of {} races for year {}", allRaces.size(), year);
-            // Cache in Redis
-            putInRedisCache(year, allRaces);
-        }
-
-        return allRaces;
+        // Use the retryable method from RaceApiService
+        return ergastApiService.fetchAndSaveRaces(year, baseUrl);
     }
 
     private Optional<List<Race>> getFromRedisCache(Integer year) {
-        return Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
-                .map(cache -> cache.get(year))
-                .map(cacheValue -> {
-                    if (cacheValue != null && cacheValue.get() instanceof List<?>) {
-                        List<?> list = (List<?>) cacheValue.get();
-                        if (!list.isEmpty() && list.get(0) instanceof Race) {
-                            return (List<Race>) list;
+        try {
+            return Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
+                    .map(cache -> cache.get(year))
+                    .map(cacheValue -> {
+                        if (cacheValue != null) {
+                            @SuppressWarnings("unchecked")
+                            List<Race> races = (List<Race>) cacheValue.get();
+                            return races;
                         }
-                    }
-                    return null;
-                });
+                        return null;
+                    });
+        } catch (Exception e) {
+            log.error("Error accessing Redis cache for year {}: {}", year, e.getMessage());
+            return Optional.empty();
+        }
     }
 
     private void putInRedisCache(Integer year, List<Race> races) {
-        Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
-                .ifPresent(cache -> {
-                    try {
+        try {
+            Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
+                    .ifPresent(cache -> {
                         cache.put(year, races);
                         log.debug("Successfully cached {} races for year {}", races.size(), year);
-                    } catch (Exception e) {
-                        log.error("Failed to cache races for year {}: {}", year, e.getMessage());
-                    }
-                });
+                    });
+        } catch (Exception e) {
+            log.error("Failed to cache races for year {}: {}", year, e.getMessage());
+            // Continue without caching
+        }
     }
 
     private Race mapToRace(RaceData raceData) {
+        if (raceData == null) {
+            log.warn("Invalid race data received: null");
+            return null;
+        }
+
+        if (raceData.getSeason() == null || raceData.getRound() == null) {
+            log.warn("Invalid race data received: missing season or round");
+            return null;
+        }
+
         Race.Circuit circuit = null;
-        if (raceData.getCircuit() != null) {
+        CircuitData circuitData = raceData.getCircuit();
+        if (circuitData != null) {
+            LocationData location = circuitData.getLocation();
             circuit = Race.Circuit.builder()
-                .circuitId(raceData.getCircuit().getCircuitId())
-                .circuitName(raceData.getCircuit().getCircuitName())
-                .locality(raceData.getCircuit().getLocation() != null ? raceData.getCircuit().getLocation().getLocality() : null)
-                .country(raceData.getCircuit().getLocation() != null ? raceData.getCircuit().getLocation().getCountry() : null)
+                .circuitId(circuitData.getCircuitId())
+                .circuitName(circuitData.getCircuitName())
+                .locality(location != null ? location.getLocality() : null)
+                .country(location != null ? location.getCountry() : null)
                 .build();
         }
 
@@ -134,35 +139,52 @@ public class RaceService {
             .date(raceData.getDate())
             .time(raceData.getTime())
             .circuit(circuit)
+            .results(new ArrayList<>())  // Initialize empty list
             .build();
 
         if (raceData.getResults() != null) {
-            raceData.getResults().forEach(resultData -> {
-                RaceResult result = RaceResult.builder()
+            for (ResultData resultData : raceData.getResults()) {
+                if (resultData == null) continue;
+
+                RaceResult raceResult = RaceResult.builder()
                     .position(resultData.getPosition())
                     .points(resultData.getPoints())
                     .grid(resultData.getGrid())
                     .laps(resultData.getLaps())
                     .status(resultData.getStatus())
-                    .driver(resultData.getDriver() != null ? RaceResult.Driver.builder()
-                        .driverId(resultData.getDriver().getDriverId())
-                        .code(resultData.getDriver().getCode())
-                        .givenName(resultData.getDriver().getGivenName())
-                        .familyName(resultData.getDriver().getFamilyName())
-                        .nationality(resultData.getDriver().getNationality())
-                        .build() : null)
-                    .constructor(resultData.getConstructor() != null ? RaceResult.Constructor.builder()
-                        .constructorId(resultData.getConstructor().getConstructorId())
-                        .name(resultData.getConstructor().getName())
-                        .nationality(resultData.getConstructor().getNationality())
-                        .build() : null)
-                    .time(resultData.getTime() != null ? RaceResult.RaceTime.builder()
-                        .millis(resultData.getTime().getMillis())
-                        .time(resultData.getTime().getTime())
-                        .build() : null)
                     .build();
-                race.addResult(result);
-            });
+
+                DriverData driverData = resultData.getDriver();
+                if (driverData != null) {
+                    raceResult.setDriver(RaceResult.Driver.builder()
+                        .driverId(driverData.getDriverId())
+                        .code(driverData.getCode())
+                        .givenName(driverData.getGivenName())
+                        .familyName(driverData.getFamilyName())
+                        .nationality(driverData.getNationality())
+                        .build());
+                }
+
+                ConstructorData constructorData = resultData.getConstructor();
+                if (constructorData != null) {
+                    raceResult.setConstructor(RaceResult.Constructor.builder()
+                        .constructorId(constructorData.getConstructorId())
+                        .name(constructorData.getName())
+                        .nationality(constructorData.getNationality())
+                        .build());
+                }
+
+                TimeData timeData = resultData.getTime();
+                if (timeData != null) {
+                    raceResult.setTime(RaceResult.RaceTime.builder()
+                        .millis(timeData.getMillis())
+                        .time(timeData.getTime())
+                        .build());
+                }
+
+                // Properly set up bidirectional relationship
+                race.addResult(raceResult);
+            }
         }
 
         return race;

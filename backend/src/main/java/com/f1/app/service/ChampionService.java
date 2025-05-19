@@ -38,14 +38,19 @@ public class ChampionService {
     }
 
     private Optional<Champion> getFromRedisCache(Integer year) {
-        return Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
-                .map(cache -> cache.get(year))
-                .map(cacheValue -> {
-                    if (cacheValue != null && cacheValue.get() instanceof Champion) {
-                        return (Champion) cacheValue.get();
-                    }
-                    return null;
-                });
+        try {
+            return Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
+                    .map(cache -> cache.get(year))
+                    .map(cacheValue -> {
+                        if (cacheValue != null && cacheValue.get() instanceof Champion) {
+                            return (Champion) cacheValue.get();
+                        }
+                        return null;
+                    });
+        } catch (Exception e) {
+            log.error("Error accessing Redis cache for year {}: {}", year, e.getMessage());
+            return Optional.empty();
+        }
     }
 
     private void putInRedisCache(Integer year, Champion champion) {

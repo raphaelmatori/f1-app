@@ -21,13 +21,20 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = "race")
+@EqualsAndHashCode(exclude = "race")
 @Table(name = "race_results")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class RaceResult implements Serializable {
@@ -71,11 +78,11 @@ public class RaceResult implements Serializable {
         this.race = race;
     }
     
-    @Embeddable
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @Embeddable
     public static class Driver implements Serializable {
         private static final long serialVersionUID = 1L;
         
@@ -86,11 +93,11 @@ public class RaceResult implements Serializable {
         private String nationality;
     }
     
-    @Embeddable
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @Embeddable
     public static class Constructor implements Serializable {
         private static final long serialVersionUID = 1L;
         
@@ -99,11 +106,11 @@ public class RaceResult implements Serializable {
         private String nationality;
     }
     
-    @Embeddable
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @Embeddable
     public static class RaceTime implements Serializable {
         private static final long serialVersionUID = 1L;
         

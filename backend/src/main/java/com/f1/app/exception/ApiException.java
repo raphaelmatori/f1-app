@@ -14,8 +14,4 @@ public class ApiException extends RuntimeException {
         this.status = status;
         this.message = message;
     }
-    
-    public ApiException(String message) {
-        this(HttpStatus.INTERNAL_SERVER_ERROR, message);
-    }
 } 

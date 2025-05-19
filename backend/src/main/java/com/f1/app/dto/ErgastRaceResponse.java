@@ -4,14 +4,23 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ErgastRaceResponse {
     @JsonProperty("MRData")
     private MRData mrData;
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MRData {
         private String xmlns;
         private String series;
@@ -25,6 +34,9 @@ public class ErgastRaceResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class RaceTable {
         private String season;
         private String round;
@@ -34,6 +46,9 @@ public class ErgastRaceResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class RaceData {
         private String season;
         private String round;
@@ -41,6 +56,7 @@ public class ErgastRaceResponse {
         
         @JsonProperty("raceName")
         private String raceName;
+        
         private String date;
         private String time;
         
@@ -52,9 +68,16 @@ public class ErgastRaceResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CircuitData {
+        @JsonProperty("circuitId")
         private String circuitId;
+        
         private String url;
+        
+        @JsonProperty("circuitName")
         private String circuitName;
         
         @JsonProperty("Location")
@@ -62,6 +85,9 @@ public class ErgastRaceResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class LocationData {
         private String lat;
         private String lang;
@@ -70,6 +96,9 @@ public class ErgastRaceResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ResultData {
         private String number;
         private String position;
@@ -90,25 +119,45 @@ public class ErgastRaceResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class DriverData {
+        @JsonProperty("driverId")
         private String driverId;
+        
         private String code;
         private String url;
+        
+        @JsonProperty("givenName")
         private String givenName;
+        
+        @JsonProperty("familyName")
         private String familyName;
+        
+        @JsonProperty("dateOfBirth")
         private String dateOfBirth;
+        
         private String nationality;
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ConstructorData {
+        @JsonProperty("constructorId")
         private String constructorId;
+        
         private String url;
         private String name;
         private String nationality;
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class TimeData {
         private String millis;
         private String time;

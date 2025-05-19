@@ -8,6 +8,10 @@ spring:
     username: ${MYSQL_USER:f1_user}
     password: ${MYSQL_PASSWORD:f1_password}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   
   # JPA/Hibernate Configuration
   jpa:
@@ -36,3 +40,15 @@ logging:
 api:
   ergast:
     baseUrl: https://api.jolpi.ca/ergast/f1
+
+# SpringDoc OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+  show-actuator: false
+  packages-to-scan: com.f1.app.controller
