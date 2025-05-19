@@ -9,9 +9,13 @@ The project is divided into two main parts:
 ### Backend (Spring Boot)
 - Java 17
 - Spring Boot 3.4.5
-- MySQL 8.0
+- MySQL 8.0 (main profile)
+- H2 in-memory database (test profile)
 - JPA/Hibernate
+- Redis (for caching)
 - OpenAPI/Swagger documentation
+- Robust error handling with global exception handler
+- Test coverage enforced with Jacoco
 
 ### Frontend (Angular)
 - Angular 19.2
@@ -26,13 +30,14 @@ Before running the application, make sure you have the following installed:
 1. Java 17 or higher
 2. Node.js 18 or higher
 3. MySQL 8.0
-4. Angular CLI 19.2.12
+4. Redis
+5. Angular CLI 19.2.12
 
 ## Setup Instructions
 
 ### Database Setup
 1. Create a MySQL database named `f1_champions`
-2. Update database credentials in `backend/src/main/resources/application.properties` if needed
+2. Update database credentials in `backend/src/main/resources/application.yml` if needed
 
 ### Backend Setup
 1. Navigate to the backend directory:
@@ -48,6 +53,17 @@ Before running the application, make sure you have the following installed:
    ./gradlew bootRun
    ```
 The backend will start on http://localhost:8080
+
+#### Running Tests
+- The backend uses a test profile with H2 and Redis (localhost:6379).
+- To run all tests and check coverage:
+  ```bash
+  ./gradlew test
+  ```
+- Jacoco HTML coverage report will be generated at:
+  ```
+  backend/build/reports/jacoco/test/html/index.html
+  ```
 
 ### Frontend Setup
 1. Navigate to the frontend directory:
@@ -73,14 +89,32 @@ Once the backend is running, you can access the API documentation at:
 ## Features
 
 - [x] Project Setup
-- [ ] Backend API Development
-- [ ] Database Schema Design
-- [ ] Frontend Components
-- [ ] Integration with Ergast API
-- [ ] Unit Tests
-- [ ] End-to-End Tests
-- [ ] Documentation
-- [ ] Deployment Instructions
+- [x] Backend API Development (Spring Boot, REST, error handling)
+- [x] Database Schema Design (JPA/Hibernate, MySQL, H2 for tests)
+- [x] Redis Caching Integration
+- [x] Integration with Ergast API
+- [x] Unit Tests and Coverage Enforcement (≥ 70% for critical logic)
+- [x] OpenAPI/Swagger Documentation
+- [x] Graceful error and loading states (backend)
+- [x] Race winner data persisted and served from backend after first fetch
+- [x] Season list: Display each season's World Champion (2005 to present)
+- [x] Race winners: Clicking a season reveals all grand‑prix winners for that year
+- [x] Highlight champion in race list
+- [ ] Frontend Components (Angular SPA: season list, race list, highlight champion, error/loading states)
+- [ ] End-to-End Tests (frontend and backend integration)
+- [ ] CI/CD pipeline (GitHub Actions or similar: install → lint → test → build, reject on test failure)
+- [ ] Dockerization: Multi-stage Dockerfiles, single docker-compose.yml for backend, DB, (optionally frontend)
+- [ ] Healthchecks & environment variables in Docker
+- [ ] Documentation: High-level architecture, API contract/schema, screenshots/diagrams
+- [ ] Deployment Instructions (docker compose up, pipeline triggers)
+- [ ] Containerized admin tool (e.g., pgAdmin, optional)
+- [ ] Security: Dependency scan (CodeQL/Snyk/Trivy), reject on scan failure
+- [ ] Automatic deploy to free tier platform (Render, Railway, Fly.io, etc.)
+- [ ] Docker image pushed to public registry (optional)
+- [ ] Makefile for common tasks (optional)
+- [ ] Async job to refresh seasons weekly after every race (optional, nice to have)
+- [ ] SSR/SSG (Next.js/Nuxt) or Lighthouse score ≥ 90 (optional, nice to have)
+- [ ] Seed script for DB (optional)
 
 ## Contributing
 
