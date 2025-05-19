@@ -1,0 +1,14 @@
+<header class="header-wrapper">
+  <div>
+    <button
+      *ngIf="headerService.isGoBackAvailable()"
+      (click)="headerService.goBack()"
+    >
+      <i class="fa fa-arrow-left" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <h1>{{ headerService.getTitle() }}</h1>
+
+  <div></div>
+</header>

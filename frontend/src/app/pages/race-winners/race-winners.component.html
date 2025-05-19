@@ -1,0 +1,33 @@
+<app-spinner *ngIf="isLoading"></app-spinner>
+
+<p *ngIf="shouldDisplayErrorMessage()">{{ errorMessage }}</p>
+
+<div class="winners-wrapper" *ngIf="shouldDisplayResults()">
+  <p *ngIf="this.worldChampion">
+    <small>
+      (All races won by the world champion
+      {{ getDriverFullName(worldChampion) }}
+      in {{ yearBase }} are being displayed with a
+      <i class="fa fa-trophy"></i>)</small
+    >
+  </p>
+  <app-list
+    [items]="items"
+    (itemClickCallback)="selectedItemHandler($event)"
+    (fetchMoreItemsCallback)="fetchRacesData()"
+    [listItem]="itemContent"
+  ></app-list>
+</div>
+
+<ng-template #listItemContent let-item="item">
+  <div [ngClass]="{ 'winners-item-list': true, selected: item.selected }">
+    <p>Race: {{ item.title }}</p>
+    <p>Winner: {{ item.additionalInfo.winnerFullName }}</p>
+  </div>
+  <div *ngIf="item.selected" class="trophy">
+    <i
+      class="fa fa-trophy"
+      [title]="item.additionalInfo.winnerFullName + ' won this race'"
+    ></i>
+  </div>
+</ng-template>

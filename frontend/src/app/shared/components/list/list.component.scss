@@ -1,0 +1,31 @@
+@import "_variables";
+
+.list-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+
+  button {
+    height: 3rem;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  ul {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    list-style-type: none;
+    width: 100%;
+    max-width: 40rem;
+    gap: 1rem;
+
+    li {
+      width: 100%;
+    }
+  }
+}
