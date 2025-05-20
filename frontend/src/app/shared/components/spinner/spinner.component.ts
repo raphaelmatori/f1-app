@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import {Component, Input} from "@angular/core";
 import { CommonModule } from "@angular/common";
 
 @Component({
@@ -8,4 +8,8 @@ import { CommonModule } from "@angular/common";
   styleUrls: ["./spinner.component.scss"],
   standalone: true
 })
-export class SpinnerComponent {}
+export class SpinnerComponent {
+
+  @Input()
+  loadingText = "";
+}

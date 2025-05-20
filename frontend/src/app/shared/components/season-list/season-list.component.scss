@@ -1,0 +1,30 @@
+.season-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+}
+
+.race-list-container {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease;
+  
+  &.active {
+    max-height: 2000px;
+  }
+}
+
+.champion-row {
+  background: linear-gradient(90deg, rgb(203 255 0 / 10%) 0%, rgb(255 255 0 / 49%) 100%);
+  border-left: 4px solid #e10600;
+}
+
+.season-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(255, 0, 0, 0.3);
+  }
+} 

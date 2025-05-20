@@ -24,13 +24,13 @@
     height: 5rem;
     border: 1px solid $soft-blue;
     border-radius: 1rem;
-    color: $dark-blue;
+    color: $dark-red;
     p {
       margin: 0;
     }
 
     &:hover {
-      border-color: $dark-blue;
+      border-color: $dark-red;
       background-color: $soft-blue;
       transition: background-color 0.3s ease, color 0.3s ease;
       color: #fff;

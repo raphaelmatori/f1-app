@@ -1,16 +1,3 @@
-<app-spinner *ngIf="isLoading"></app-spinner>
-<div class="main-wrapper" *ngIf="!isLoading">
-  <p>Select a Year</p>
-  <app-list
-    [items]="items"
-    (itemClickCallback)="selectedItemHandler($event)"
-    (fetchMoreItemsCallback)="fetchSeasonsData()"
-    [listItem]="itemContent"
-  ></app-list>
+<div class="main-wrapper">
+  <app-season-list></app-season-list>
 </div>
-
-<ng-template #listItemContent let-item="item">
-  <div [ngClass]="{ 'main-item-list': true, selected: item.selected }">
-    <p>{{ item.title }}</p>
-  </div>
-</ng-template>

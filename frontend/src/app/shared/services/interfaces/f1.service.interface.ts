@@ -2,6 +2,7 @@ import { Injectable } from "@angular/core";
 import { Driver } from "@app-models/driver.interface";
 import { Paginate } from "@app-models/paginate.interface";
 import { Observable } from "rxjs";
+import { Race } from '@app/shared/models/race.interface';
 
 @Injectable()
 export class F1Service {
@@ -25,6 +26,10 @@ export class F1Service {
   }
 
   public getAllRacesWinnersOfAYear(year: number): Observable<Paginate> {
+    return new Observable<Paginate>();
+  }
+
+  public getRacesByYear(year: number): Observable<Paginate> {
     return new Observable<Paginate>();
   }
 }

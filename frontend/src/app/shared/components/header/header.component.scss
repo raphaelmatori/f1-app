@@ -3,10 +3,11 @@
 .header-wrapper {
   display: flex;
   align-items: center;
-  background-color: $dark-blue;
+  background-color: $dark-red;
   width: 100%;
   height: 3rem;
   justify-content: space-between;
+  margin-bottom: 2rem;
 
   h1 {
     font-size: 2rem;
