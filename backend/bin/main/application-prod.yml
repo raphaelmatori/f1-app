@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: f1-champions-api
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:f1_champions}?createDatabaseIfNotExist=true
+    username: ${MYSQL_USER:f1_user}
+    password: ${MYSQL_PASSWORD:f1_password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  
+  # JPA/Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false
+
+# Server Configuration
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,text/css,application/javascript,text/javascript
+    min-response-size: 1024
+
+# Logging Configuration
+logging:
+  level:
+    root: WARN
+    org.springframework: WARN
+    com.f1.app: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+
+# API Configuration
+api:
+  ergast:
+    baseUrl: https://api.jolpi.ca/ergast/f1
+
+# SpringDoc OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: false
+  show-actuator: false
+  packages-to-scan: com.f1.app.controller 

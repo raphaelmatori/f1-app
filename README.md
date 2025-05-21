@@ -100,20 +100,19 @@ Once the backend is running, you can access the API documentation at:
 - [x] Season list: Display each season's World Champion (2005 to present)
 - [x] Race winners: Clicking a season reveals all grand‑prix winners for that year
 - [x] Highlight champion in race list
-- [ ] Frontend Components (Angular SPA: season list, race list, highlight champion, error/loading states)
-- [ ] End-to-End Tests (frontend and backend integration)
+- [x] Frontend Components (Angular SPA: season list, race list, highlight champion, error/loading states)
+- [x] End-to-End Tests (frontend and backend integration)
 - [ ] CI/CD pipeline (GitHub Actions or similar: install → lint → test → build, reject on test failure)
 - [ ] Dockerization: Multi-stage Dockerfiles, single docker-compose.yml for backend, DB, (optionally frontend)
 - [ ] Healthchecks & environment variables in Docker
 - [ ] Documentation: High-level architecture, API contract/schema, screenshots/diagrams
 - [ ] Deployment Instructions (docker compose up, pipeline triggers)
-- [ ] Containerized admin tool (e.g., pgAdmin, optional)
+- [x] Containerized admin tool (e.g., pgAdmin, optional)
 - [ ] Security: Dependency scan (CodeQL/Snyk/Trivy), reject on scan failure
 - [ ] Automatic deploy to free tier platform (Render, Railway, Fly.io, etc.)
 - [ ] Docker image pushed to public registry (optional)
-- [ ] Makefile for common tasks (optional)
 - [ ] Async job to refresh seasons weekly after every race (optional, nice to have)
-- [ ] SSR/SSG (Next.js/Nuxt) or Lighthouse score ≥ 90 (optional, nice to have)
+- [x] SSR/SSG (Next.js/Nuxt) or Lighthouse score ≥ 90 (optional, nice to have)
 - [ ] Seed script for DB (optional)
 
 ## Contributing

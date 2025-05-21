@@ -1,46 +1,96 @@
-name: CI/CD
+name: Frontend CI
 
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'frontend/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'frontend/**'
+
+env:
+  NODE_ENV: production
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: ${{ matrix.node-version }}
         cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
     
     - name: Install dependencies
+      working-directory: ./frontend
       run: npm ci
     
-    - name: Run linting
+    - name: Lint
+      working-directory: ./frontend
       run: npm run lint
     
     - name: Run unit tests
-      run: npm run test:coverage
+      working-directory: ./frontend
+      run: npm run test -- --watch=false --browsers=ChromeHeadless
     
     - name: Run E2E tests
-      run: |
-        npm run start &
-        npm run e2e:headless
+      working-directory: ./frontend
+      run: npm run e2e:headless
     
-    - name: Check dependencies
-      run: npm run deps:check
+    - name: Build
+      working-directory: ./frontend
+      run: npm run build -- --configuration=production
     
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage/lcov.info
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: true 
+        name: frontend-build
+        path: frontend/dist
+        retention-days: 7
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run npm audit
+      working-directory: ./frontend
+      run: npm audit --production
+
+    - name: Run Snyk security scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+      continue-on-error: true
+
+  notify:
+    needs: [build, security]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Notify on failure
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const run_id = context.runId;
+          const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
+          
+          github.rest.issues.create({
+            owner,
+            repo,
+            title: `Frontend CI Pipeline Failed - Run #${run_id}`,
+            body: `The frontend CI pipeline has failed. Please check the [run details](${run_url}) for more information.`
+          }); 

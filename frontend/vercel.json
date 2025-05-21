@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/f1-champions-explorer/server/main.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/assets/(.*)",
+      "dest": "/dist/f1-champions-explorer/browser/assets/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/f1-champions-explorer/server/main.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "API_URL": "https://api.f1-world-champions.com",
+    "API_F1_SERIES": "https://api.f1-world-champions.com/api/v1",
+    "ENABLE_DEBUG": "false",
+    "CACHE_TIMEOUT": "3600",
+    "MAX_RETRIES": "3",
+    "RETRY_DELAY": "1000"
+  }
+} 
