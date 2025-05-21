@@ -2,18 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "dist/f1-champions-explorer/server/main.js",
+      "src": "dist/f1-app/server/main.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/assets/(.*)",
-      "dest": "/dist/f1-champions-explorer/browser/assets/$1"
+      "dest": "/dist/f1-app/browser/assets/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/f1-champions-explorer/server/main.js"
+      "dest": "/dist/f1-app/server/main.js"
     }
   ],
   "env": {

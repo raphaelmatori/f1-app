@@ -41,9 +41,8 @@ jobs:
           MAX_RETRIES: ${{ secrets.MAX_RETRIES }}
           RETRY_DELAY: ${{ secrets.RETRY_DELAY }}
         run: |
-          npm run build:browser
+          npm run build
           npm run build:server
-          npm run build:express
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v20

@@ -8,11 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:cicd": "npx ng test --browsers=ChromeHeadless --watch=false --code-coverage",
-    "build:browser": "ng build --configuration production",
     "build:server": "ng run f1-app:server:production",
-    "build:ssr": "npm run build:browser && npm run build:server",
     "serve:ssr": "node dist/f1-app/server/main.js",
-    "build:express": "tsc -p tsconfig.express.json",
     "e2e": "cypress open",
     "e2e:headless": "cypress run",
     "e2e:coverage": "cypress run --env coverage=true",
@@ -33,9 +30,6 @@
     "@angular/router": "^19.2.0",
     "@angular/ssr": "^19.2.12",
     "@fortawesome/fontawesome-free": "^6.7.2",
-    "@nguniversal/express-engine": "^7.0.2",
-    "@types/compression": "^1.7.5",
-    "compression": "^1.8.0",
     "express": "^4.21.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
@@ -62,3 +56,4 @@
     "typescript": "~5.7.2"
   }
 }
+
