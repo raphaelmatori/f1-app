@@ -9,7 +9,7 @@ export const environment = {
   endpoints: {
     seasons: "seasons.json",
     allRacesWinnersOfAYear: (year: number) => `races/${year}`,
-    worldChampionByYear: (year: number) => `champions/${year}`,
+    worldChampions: `champions`,
   },
   config: {
     pagination: {
