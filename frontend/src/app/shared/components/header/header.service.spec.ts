@@ -19,11 +19,4 @@ describe('HeaderService', () => {
     service.setTitle('Test Title');
     expect(service.getTitle()).toBe('Test Title');
   });
-
-  it('should add and reset go back list', () => {
-    service.addGoBackTo('/test');
-    expect(service.isGoBackAvailable()).toBeTrue();
-    service.resetGoBackList();
-    expect(service.isGoBackAvailable()).toBeFalse();
-  });
 }); 

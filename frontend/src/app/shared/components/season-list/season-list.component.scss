@@ -1,15 +1,12 @@
 .season-list-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  width: 100%;
-  max-width: 1000px;
 }
 
 .race-list-container {
   max-height: 0;
-  overflow: hidden;
   transition: max-height 0.5s ease;
+  overflow: hidden;
   
   &.active {
     max-height: 2000px;
@@ -23,6 +20,7 @@
 
 .season-card {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  min-height: 200px; // Reserve space for content
   
   &:hover {
     transform: translateY(-5px);

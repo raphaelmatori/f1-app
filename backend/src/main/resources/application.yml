@@ -27,6 +27,10 @@ spring:
 # Server Configuration
 server:
   port: 8080
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,text/css,application/javascript,text/javascript
+    min-response-size: 1024
 
 # Logging Configuration
 logging:

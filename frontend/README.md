@@ -1,59 +1,112 @@
-# F1App
+# F1 App
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.12.
+A modern Formula 1 statistics application built with Angular.
 
-## Development server
+## Features
 
-To start a local development server, run:
+- View F1 seasons and champions
+- Detailed race winner information
+- Responsive design with Tailwind CSS
+- Server-side rendering support
+- Comprehensive test coverage
 
-```bash
-ng serve
-```
+## Prerequisites
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- Node.js 18+
+- npm 9+
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Installation
 
 ```bash
-ng generate --help
+npm install
 ```
 
-## Building
-
-To build the project run:
+## Development
 
 ```bash
-ng build
+# Start development server
+npm start
+
+# Start with SSR
+npm run serve:ssr
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Testing
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+### Unit Tests
 
 ```bash
-ng test
+# Run unit tests
+npm test
+
+# Run with coverage
+npm run test:coverage
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+### E2E Tests
 
 ```bash
-ng e2e
+# Run E2E tests in browser
+npm run e2e
+
+# Run E2E tests headless
+npm run e2e:headless
+
+# Run E2E tests with coverage
+npm run e2e:coverage
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+### Run All Tests
 
-## Additional Resources
+```bash
+# Run all tests (unit + E2E)
+npm run test:all
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Dependency Management
+
+```bash
+# Check for outdated or vulnerable dependencies
+npm run deps:check
+
+# Fix dependency issues
+npm run deps:fix
+```
+
+## Build
+
+```bash
+# Build for production
+npm run build
+
+# Build for SSR
+npm run build:ssr
+```
+
+## Docker
+
+```bash
+# Build and run with Docker
+docker build -t f1-app .
+docker run -p 4000:4000 f1-app
+```
+
+## Performance
+
+The application is optimized for performance with:
+- Server-side rendering
+- Lazy loading
+- Code splitting
+- Optimized assets
+- Caching strategies
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Run tests and ensure they pass
+4. Submit a pull request
+
+## License
+
+MIT

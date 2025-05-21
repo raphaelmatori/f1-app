@@ -20,6 +20,7 @@ export class SeasonListComponent implements OnInit {
   races: { [year: number]: Race[] } = {};
   expandedSeasons: { [year: number]: boolean } = {};
   loading = true;
+  error = '';
 
   constructor(private f1Service: F1Service) {}
 
@@ -28,19 +29,25 @@ export class SeasonListComponent implements OnInit {
   }
 
   fetchSeasonsAndChampions() {
-    const currentYear = new Date().getFullYear();
-    this.seasons = Array.from(
-      { length: currentYear - 2005 + 1 },
-      (_, i) => currentYear - i
-    );
+    this.f1Service.getWorldChampions().subscribe({
+      next: (championsByYear) => {
+        if (championsByYear) {
+          let years = Array.from(championsByYear.keys());
+          years.sort((a, b) => b - a); // Descending
+          years.forEach(year => {
+            this.champions[year] = championsByYear.get(year);
+          });
 
-    this.f1Service.getWorldChampions().subscribe(championsByYear => {
-      if (championsByYear) {
-        this.seasons.forEach(year => {
-          this.champions[year] = championsByYear.get(year);
-        });
+          this.seasons = years;
+        }
+        this.loading = false;
+        this.error = '';
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = 'Error loading F1 World Champions';
+        console.error('Error loading F1 Wrold Champions:', err);
       }
-      this.loading = false;
     });
   }
 
@@ -52,19 +59,25 @@ export class SeasonListComponent implements OnInit {
   }
 
   loadRaces(year: number) {
-    this.f1Service.getAllRacesWinnersOfAYear(year).subscribe(data => {
-      this.races[year] = data.map((race: any) => ({
-        season: race.season,
-        round: race.round,
-        url: race.url,
-        raceName: race.raceName,
-        date: race.date,
-        circuitName: race.circuit.circuitName,
-        winner: race.results[0]?.driver,
-        constructor: race.results[0]?.constructor,
-        Circuit: race.circuit,
-        Results: race.results
-      }));
+    this.f1Service.getAllRacesWinnersOfAYear(year).subscribe({
+      next: (data) => {
+        this.races[year] = data.map((race: any) => ({
+          season: race.season,
+          round: race.round,
+          url: race.url,
+          raceName: race.raceName,
+          date: race.date,
+          circuitName: race.circuit.circuitName,
+          winner: race.results[0]?.driver,
+          constructor: race.results[0]?.constructor,
+          Circuit: race.circuit,
+          Results: race.results
+        }));
+      },
+      error: (err) => {
+        console.error(`Error loading races for ${year}:`, err);
+        this.races[year] = [];
+      }
     });
   }
 

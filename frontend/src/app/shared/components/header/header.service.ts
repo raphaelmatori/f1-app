@@ -5,20 +5,8 @@ import { Router } from "@angular/router";
   providedIn: "root",
 })
 export class HeaderService {
-  private title = "F1 World Champions List";
-  private goBackTo: string[] = [];
-  constructor(private router: Router) {}
-
-  addGoBackTo(url: string): void {
-    this.goBackTo.push(url);
-  }
-
-  goBack() {
-    if (this.goBackTo.length) {
-      this.router.navigate([this.goBackTo.pop()]);
-    }
-    this.setTitle("");
-  }
+  private title = "F1 World Champions";
+  constructor() {}
 
   setTitle(title: string): void {
     this.title = title;
@@ -26,13 +14,5 @@ export class HeaderService {
 
   getTitle() {
     return this.title;
-  }
-
-  resetGoBackList() {
-    this.goBackTo = [];
-  }
-
-  isGoBackAvailable(): boolean {
-    return this.goBackTo.length > 0;
   }
 }

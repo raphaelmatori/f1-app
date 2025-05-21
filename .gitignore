@@ -43,6 +43,7 @@ dist/
 .tmp/
 .angular/
 coverage/
+.nyc_output/
 
 # npm/yarn logs
 npm-debug.log*
