@@ -1,4 +1,4 @@
-@import "_variables";
+@use '../../../styles/variables' as *;
 
 ::ng-deep app-main {
   display: flex;
@@ -44,7 +44,9 @@
     font-size: 2rem;
   }
 
-  app-list {
-    width: 100%;
+  app-season-list {
+    width: 90%;
+    display: flex;
+    justify-content: center;
   }
 }

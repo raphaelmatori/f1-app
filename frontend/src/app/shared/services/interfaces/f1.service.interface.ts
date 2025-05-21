@@ -1,35 +1,15 @@
 import { Injectable } from "@angular/core";
-import { Driver } from "@app-models/driver.interface";
-import { Paginate } from "@app-models/paginate.interface";
+import type { Driver } from "@app-models/driver.interface";
 import { Observable } from "rxjs";
-import { Race } from '@app/shared/models/race.interface';
 
 @Injectable()
 export class F1Service {
-  public getSeasons(offset: number, limit: number): Observable<Paginate> {
-    return new Observable<Paginate>();
+  public getWorldChampions(): Observable<Map<number,Driver> | null> {
+    return new Observable<Map<number,Driver>>();
   }
 
-  public getSeasonsBetweenYearInterval(
-    initialYear: number,
-    finalYear: number
-  ): Observable<Paginate> {
-    return new Observable<Paginate>();
-  }
-
-  public getSeasonsFromYearUntilNow(year: number): Observable<Paginate> {
-    return new Observable<Paginate>();
-  }
-
-  public getWorldChampionByYear(year: number): Observable<Driver | null> {
-    return new Observable<Driver>();
-  }
-
-  public getAllRacesWinnersOfAYear(year: number): Observable<Paginate> {
-    return new Observable<Paginate>();
-  }
-
-  public getRacesByYear(year: number): Observable<Paginate> {
-    return new Observable<Paginate>();
+  public getAllRacesWinnersOfAYear(year: number): Observable<any> {
+    void year;
+    return new Observable<any>();
   }
 }

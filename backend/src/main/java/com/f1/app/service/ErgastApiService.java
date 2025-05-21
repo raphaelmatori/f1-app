@@ -124,8 +124,24 @@ public class ErgastApiService {
                                 .filter(race -> race != null)
                                 .collect(Collectors.toList());
                         if (!races.isEmpty()) {
-                            allRaces.addAll(races);
-                            log.debug("Fetched {} races from offset {}", races.size(), offset);
+                            // Handle duplicate races by appending results
+                            for (Race newRace : races) {
+                                Optional<Race> existingRace = allRaces.stream()
+                                        .filter(race -> race.getCircuit() != null && 
+                                                      newRace.getCircuit() != null && 
+                                                      race.getCircuit().getCircuitId().equals(newRace.getCircuit().getCircuitId()))
+                                        .findFirst();
+                                
+                                if (existingRace.isPresent()) {
+                                    // Append results to existing race
+                                    existingRace.get().getResults().addAll(newRace.getResults());
+                                    log.debug("Appended results to existing race at circuit: {}", newRace.getCircuit().getCircuitId());
+                                } else {
+                                    // Add new race
+                                    allRaces.add(newRace);
+                                    log.debug("Added new race for circuit: {}", newRace.getCircuit().getCircuitId());
+                                }
+                            }
                         }
                     }
                 } catch (RestClientException e) {

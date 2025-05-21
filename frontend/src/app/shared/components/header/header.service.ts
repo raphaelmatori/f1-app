@@ -5,7 +5,7 @@ import { Router } from "@angular/router";
   providedIn: "root",
 })
 export class HeaderService {
-  private title = "";
+  private title = "F1 World Champions List";
   private goBackTo: string[] = [];
   constructor(private router: Router) {}
 

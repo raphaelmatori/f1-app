@@ -1,29 +1,42 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
+import { RouterTestingModule } from '@angular/router/testing';
+import { HeaderComponent } from '@app/shared/components/header/header.component';
+import { SpinnerComponent } from '@app/shared/components/spinner/spinner.component';
+import { FooterComponent } from '@app/shared/components/footer/footer.component';
+import { F1Service } from '@app/shared/services/interfaces/f1.service.interface';
+import { ErgastService } from '@app/shared/services/ergast.service';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('AppComponent', () => {
+  let component: AppComponent;
+  let fixture: ComponentFixture<AppComponent>;
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AppComponent],
-    }).compileComponents();
+      imports: [
+        AppComponent,
+        RouterTestingModule,
+        HttpClientTestingModule
+      ],
+      providers: [
+        { provide: F1Service, useClass: ErgastService }
+      ]
+    })
+    .compileComponents();
   });
 
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
-  it(`should have the 'f1-app' title`, () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.componentInstance;
-    expect(app.title).toEqual('f1-app');
-  });
-
-  it('should render title', () => {
-    const fixture = TestBed.createComponent(AppComponent);
+  beforeEach(() => {
+    fixture = TestBed.createComponent(AppComponent);
+    component = fixture.componentInstance;
     fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, f1-app');
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should have title f1-app', () => {
+    expect(component.title).toBe('f1-app');
   });
 });

@@ -17,12 +17,8 @@
               </div>
               <div>
                 <h3 class="text-xl font-bold">{{ champions[year]?.givenName }} {{ champions[year]?.familyName }}</h3>
-                <p class="text-gray-400">{{ champions[year]?.nationality }}</p>
+                <p class="text-gray-400" *ngIf="champions[year]">{{ countryFlags[champions[year]?.nationality || ''] }} {{ champions[year]?.nationality || ''}}</p>
               </div>
-            </div>
-            <div class="mb-4 md:mb-0 md:mr-8 md:border-l md:border-gray-700 md:pl-8">
-              <p class="text-sm text-gray-400">Constructor</p>
-              <p class="font-semibold text-white">{{ champions[year]?.constructorName || 'N/A' }}</p>
             </div>
             <div class="flex-grow md:text-right">
               <button 
@@ -71,7 +67,7 @@
                         <span class="inline-block w-2 h-2 rounded-full mr-2 bg-white"></span>
                         {{ race.winner?.givenName }} {{ race.winner?.familyName }}
                       </div>
-                      <div class="text-xs text-gray-400">{{ race.constructor?.name }}</div>
+                      <div class="text-xs text-gray-400">{{ countryFlags[race.winner?.nationality || ''] }} {{ race.winner?.nationality || '' }}</div>
                     </div>
                     <div class="col-span-2 text-gray-300">{{ formatDate(race.date) }}</div>
                   </div>

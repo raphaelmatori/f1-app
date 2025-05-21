@@ -19,7 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4000")
 @Tag(name = "Races", description = "F1 Race Results API")
 public class RaceController {
 

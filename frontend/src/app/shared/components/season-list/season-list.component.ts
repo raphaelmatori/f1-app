@@ -1,38 +1,45 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { F1Service } from '@app/shared/services/interfaces/f1.service.interface';
 import { Driver } from '@app/shared/models/driver.interface';
 import { Race } from '@app/shared/models/race.interface';
-import { Paginate } from '@app/shared/models/paginate.interface';
-import {SpinnerComponent} from "@app/shared/components/spinner/spinner.component";
+import { SpinnerComponent } from "@app/shared/components/spinner/spinner.component";
+import { HttpClientModule } from "@angular/common/http";
+import {countryFlags} from "@app/shared/constants/country-flags";
 
 @Component({
   selector: 'app-season-list',
   standalone: true,
-  imports: [CommonModule, SpinnerComponent],
+  imports: [CommonModule, SpinnerComponent, HttpClientModule],
   templateUrl: './season-list.component.html',
   styleUrls: ['./season-list.component.scss']
 })
 export class SeasonListComponent implements OnInit {
-  private f1Service = inject(F1Service);
   seasons: number[] = [];
-  champions: { [year: number]: Driver | null } = {};
+  champions: { [year: number]: Driver | undefined } = {};
   races: { [year: number]: Race[] } = {};
   expandedSeasons: { [year: number]: boolean } = {};
   loading = true;
+
+  constructor(private f1Service: F1Service) {}
 
   ngOnInit(): void {
     this.fetchSeasonsAndChampions();
   }
 
   fetchSeasonsAndChampions() {
-    this.f1Service.getSeasonsFromYearUntilNow(2005).subscribe(data => {
-      this.seasons = data.results.map((season: any) => parseInt(season.season)).reverse();
-      this.seasons.forEach(year => {
-        this.f1Service.getWorldChampionByYear(year).subscribe(champion => {
-          this.champions[year] = champion;
+    const currentYear = new Date().getFullYear();
+    this.seasons = Array.from(
+      { length: currentYear - 2005 + 1 },
+      (_, i) => currentYear - i
+    );
+
+    this.f1Service.getWorldChampions().subscribe(championsByYear => {
+      if (championsByYear) {
+        this.seasons.forEach(year => {
+          this.champions[year] = championsByYear.get(year);
         });
-      });
+      }
       this.loading = false;
     });
   }
@@ -46,20 +53,19 @@ export class SeasonListComponent implements OnInit {
 
   loadRaces(year: number) {
     this.f1Service.getAllRacesWinnersOfAYear(year).subscribe(data => {
-      this.races[year] = data.results.map((race: any) => ({
+      this.races[year] = data.map((race: any) => ({
         season: race.season,
         round: race.round,
         url: race.url,
         raceName: race.raceName,
         date: race.date,
-        circuitName: race.Circuit.circuitName,
-        winner: race.Results[0]?.Driver,
-        constructor: race.Results[0]?.Constructor,
-        Circuit: race.Circuit,
-        Results: race.Results
+        circuitName: race.circuit.circuitName,
+        winner: race.results[0]?.driver,
+        constructor: race.results[0]?.constructor,
+        Circuit: race.circuit,
+        Results: race.results
       }));
     });
-
   }
 
   isChampionWinner(year: number, winnerId: string): boolean {
@@ -70,4 +76,6 @@ export class SeasonListComponent implements OnInit {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
-} 
+
+  protected readonly countryFlags = countryFlags;
+}

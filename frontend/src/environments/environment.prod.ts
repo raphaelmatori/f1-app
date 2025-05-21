@@ -1,11 +1,10 @@
 export const environment = {
   production: true,
-  apiF1Series: "https://ergast.com/api/f1",
+  apiF1Series: "http://localhost:8080/api/v1",
   endpoints: {
     seasons: "seasons.json",
-    allRacesOfAYear: (year: number) => `${year}/races.json`,
-    worldChampionByYear: (year: number) => `${year}/driverStandings/1.json`,
-    allRacesWinnersOfAYear: (year: number) => `${year}/results/1.json`,
+    allRacesWinnersOfAYear: (year: number) => `races/${year}`,
+    worldChampionByYear: (year: number) => `champions/${year}`,
   },
   config: {
     pagination: {

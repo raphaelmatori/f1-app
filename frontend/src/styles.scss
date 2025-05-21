@@ -1,3 +1,4 @@
+@use "@fortawesome/fontawesome-free/scss/fontawesome.scss" as *;
 @import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap');
 @tailwind base;
 @tailwind components;
@@ -5,7 +6,6 @@
 
 $fa-font-path: "../fonts";
 
-@import "@fortawesome/fontawesome-free/scss/fontawesome.scss";
 
 * {
   font-size: 16px;
