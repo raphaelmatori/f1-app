@@ -1,59 +1,38 @@
 package com.f1.app.exception;
 
-import lombok.Data;
+import com.f1.app.model.ApiError;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.time.LocalDateTime;
+@RestControllerAdvice
+public class GlobalExceptionHandler {
 
-@ControllerAdvice
-public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
-    
-    @Data
-    public static class ErrorResponse {
-        private final LocalDateTime timestamp;
-        private final int status;
-        private final String error;
-        private final String message;
-        private final String path;
+    @ExceptionHandler(ServiceException.class)
+    public ResponseEntity<ApiError> handleServiceException(ServiceException ex) {
+        ApiError error = new ApiError(ex.getMessage(), ex.getCode(), ex.getStatus());
+        return new ResponseEntity<>(error, HttpStatus.valueOf(ex.getStatus()));
     }
-    
-    @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
-        ErrorResponse error = new ErrorResponse(
-            LocalDateTime.now(),
-            ex.getStatus().value(),
-            ex.getStatus().getReasonPhrase(),
-            ex.getMessage(),
-            null
-        );
-        return new ResponseEntity<>(error, ex.getStatus());
-    }
-    
+
     @ExceptionHandler(RestClientException.class)
-    public ResponseEntity<ErrorResponse> handleRestClientException(RestClientException ex) {
-        ErrorResponse error = new ErrorResponse(
-            LocalDateTime.now(),
-            500,
-            "Internal Server Error",
-            "Error communicating with external API: " + ex.getMessage(),
-            null
+    public ResponseEntity<ApiError> handleRestClientException(RestClientException ex) {
+        ApiError error = new ApiError(
+            "External API service error",
+            "EXTERNAL_API_ERROR",
+            HttpStatus.SERVICE_UNAVAILABLE.value()
         );
-        return ResponseEntity.internalServerError().body(error);
+        return new ResponseEntity<>(error, HttpStatus.SERVICE_UNAVAILABLE);
     }
-    
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
-        ErrorResponse error = new ErrorResponse(
-            LocalDateTime.now(),
-            500,
-            "Internal Server Error",
-            "An unexpected error occurred: " + ex.getMessage(),
-            null
+    public ResponseEntity<ApiError> handleGenericException(Exception ex) {
+        ApiError error = new ApiError(
+            "An unexpected error occurred",
+            "INTERNAL_SERVER_ERROR",
+            HttpStatus.INTERNAL_SERVER_ERROR.value()
         );
-        return ResponseEntity.internalServerError().body(error);
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 } 

@@ -16,6 +16,10 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+    all {
+        exclude group: 'commons-logging', module: 'commons-logging'
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+    }
 }
 
 repositories {
@@ -30,17 +34,18 @@ dependencies {
     implementation 'org.springframework.retry:spring-retry'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
-    
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    
+
     runtimeOnly 'com.mysql:mysql-connector-j'
-    
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.junit.jupiter:junit-jupiter-params'
     testImplementation 'org.mockito:mockito-junit-jupiter'
     testImplementation 'com.h2database:h2'
+    testImplementation 'it.ozimov:embedded-redis:0.7.3'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
 
@@ -48,8 +53,8 @@ test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport, jacocoTestCoverageVerification
     testLogging {
-          events "passed", "skipped", "failed"
-      }
+        events "passed", "skipped", "failed"
+    }
 }
 
 jacoco {
@@ -65,10 +70,10 @@ jacocoTestReport {
     afterEvaluate {
         classDirectories.setFrom(files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
-                "**/model/**",
-                "**/dto/**",
-                "**/config/**",
-                "**/F1Application.class"
+                    "**/model/**",
+                    "**/dto/**",
+                    "**/config/**",
+                    "**/F1Application.class"
             ])
         }))
     }

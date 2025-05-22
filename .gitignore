@@ -10,8 +10,6 @@ build/
 build/
 out/
 
-# Gradle Wrapper jar
-gradle-wrapper.jar
 
 # -------------------------------
 # Java / Spring Boot
