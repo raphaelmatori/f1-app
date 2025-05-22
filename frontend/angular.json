@@ -89,11 +89,12 @@
           "options": {
             "outputPath": "dist/f1-app/server",
             "main": "src/main.server.ts",
-            "tsConfig": "tsconfig.app.json"
+            "tsConfig": "tsconfig.server.json",
+            "outputHashing": "none"
           },
           "configurations": {
             "production": {
-              "outputHashing": "media",
+              "outputHashing": "none",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",

@@ -6,7 +6,7 @@ export const routes: Routes = [
         path: "",
         loadComponent: () => import('./pages/main/main.component').then(m => m.MainComponent)
     },
-    { path: "**", redirectTo: "" },
+    { path: "**", redirectTo: "" }
 ];
 
 @NgModule({
