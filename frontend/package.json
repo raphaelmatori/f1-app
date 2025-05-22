@@ -41,6 +41,7 @@
     "@angular/cli": "^19.2.12",
     "@angular/compiler-cli": "^19.2.0",
     "@cypress/code-coverage": "^3.14.3",
+    "@types/compression": "^1.8.0",
     "@types/express": "^4.17.22",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^18.18.0",
@@ -57,4 +58,3 @@
     "typescript": "~5.7.2"
   }
 }
-
