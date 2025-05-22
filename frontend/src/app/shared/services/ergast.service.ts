@@ -1,11 +1,9 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Driver } from "@app-models/driver.interface";
-import { Paginate } from "@app-models/paginate.interface";
 import { environment } from "@env/environment";
 import { map, Observable } from "rxjs";
 import { F1Service } from "./interfaces/f1.service.interface";
-import {List} from "postcss/lib/list";
 import {Champion} from "@app/models/champion.interface";
 
 @Injectable()

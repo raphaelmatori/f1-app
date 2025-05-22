@@ -7,7 +7,6 @@ A modern Formula 1 statistics application built with Angular.
 - View F1 seasons and champions
 - Detailed race winner information
 - Responsive design with Tailwind CSS
-- Server-side rendering support
 - Comprehensive test coverage
 
 ## Prerequisites
@@ -26,9 +25,6 @@ npm install
 ```bash
 # Start development server
 npm start
-
-# Start with SSR
-npm run serve:ssr
 ```
 
 ## Testing
@@ -77,10 +73,7 @@ npm run deps:fix
 
 ```bash
 # Build for production
-npm run build
-
-# Build for SSR
-npm run build:ssr
+npm run build -- --configuration production
 ```
 
 ## Docker
@@ -88,13 +81,12 @@ npm run build:ssr
 ```bash
 # Build and run with Docker
 docker build -t f1-app .
-docker run -p 4000:4000 f1-app
+docker run -p 80:80 f1-app
 ```
 
 ## Performance
 
 The application is optimized for performance with:
-- Server-side rendering
 - Lazy loading
 - Code splitting
 - Optimized assets

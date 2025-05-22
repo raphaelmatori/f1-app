@@ -3,10 +3,10 @@ name: Deploy Frontend to Vercel
 on:
   push:
     branches:
-      - test-pipeline
+      - main
   pull_request:
     branches:
-      - test-pipeline
+      - main
 
 jobs:
   deploy:
@@ -32,7 +32,7 @@ jobs:
       - name: Run Tests
         run: npm run test:cicd
 
-      - name: Build SSR Application
+      - name: Build Application
         env:
           API_URL: ${{ secrets.API_URL }}
           API_F1_SERIES: ${{ secrets.API_F1_SERIES }}
@@ -40,9 +40,7 @@ jobs:
           CACHE_TIMEOUT: ${{ secrets.CACHE_TIMEOUT }}
           MAX_RETRIES: ${{ secrets.MAX_RETRIES }}
           RETRY_DELAY: ${{ secrets.RETRY_DELAY }}
-        run: |
-          npm run build
-          npm run build:server
+        run: ng build --configuration production --output-hashing=all --delete-output-path
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v20
