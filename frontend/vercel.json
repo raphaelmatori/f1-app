@@ -2,27 +2,17 @@
   "version": 2,
   "builds": [
     {
-      "src": "dist/f1-app/server/main.js",
-      "use": "@vercel/node"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist/f1-app/browser"
+      }
     }
   ],
   "routes": [
     {
-      "src": "/assets/(.*)",
-      "dest": "/dist/f1-app/browser/assets/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/f1-app/server/main.js"
+      "src": "/((?!.*\\.(js|css|png|jpg|jpeg|svg|ico|json|txt|woff2|woff|ttf|eot)).*)",
+      "dest": "/index.html"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "API_URL": "https://api.f1-world-champions.com",
-    "API_F1_SERIES": "https://api.f1-world-champions.com/api/v1",
-    "ENABLE_DEBUG": "false",
-    "CACHE_TIMEOUT": "3600",
-    "MAX_RETRIES": "3",
-    "RETRY_DELAY": "1000"
-  }
-} 
+  ]
+}

@@ -1,6 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.f1-champions-explorer.com',
   enableDebug: false,
   cacheTimeout: 3600, // 1 hour in seconds
   maxRetries: 3,
