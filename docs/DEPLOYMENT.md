@@ -46,7 +46,7 @@
 
 6. **Deploy with Docker Compose**
    ```bash
-   docker-compose -f docker-compose.prod.yml up -d
+   docker-compose -f docker-compose.dev.yml up -d
    ```
 
 ## Monitoring Setup
@@ -123,9 +123,9 @@ Common issues and solutions:
 
 1. **Rollback to Previous Version**
    ```bash
-   docker-compose -f docker-compose.prod.yml down
+   docker-compose -f docker-compose.dev.yml down
    git checkout <previous-version>
-   docker-compose -f docker-compose.prod.yml up -d
+   docker-compose -f docker-compose.dev.yml up -d
    ```
 
 2. **Database Rollback**

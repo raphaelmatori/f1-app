@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MainComponent } from './main.component';
-import { SeasonListComponent } from '@app/shared/components/season-list/season-list.component';
 import { F1Service } from '@app/shared/services/interfaces/f1.service.interface';
 import { ErgastService } from '@app/shared/services/ergast.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';

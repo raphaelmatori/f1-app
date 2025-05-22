@@ -1,0 +1,25 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="AppApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+    <envs>
+      <env name="SPRING_PROFILES_ACTIVE" value="prod" />
+      <env name="MYSQL_PORT" value="10591" />
+      <env name="REDIS_HOST" value="switchback.proxy.rlwy.net" />
+      <env name="MYSQL_HOST" value="tramway.proxy.rlwy.net" />
+      <env name="MYSQL_USER" value="root" />
+      <env name="MYSQL_DATABASE" value="railway" />
+      <env name="MYSQL_PASSWORD" value="pPcIhInwUNOYBSvJTdqNUZXNtbHIlpIs" />
+      <env name="REDIS_PORT" value="51689" />
+      <env name="REDIS_PASSWORD" value="PcmhZbmvNUMbATLbsKBkNySKzAtPnIwv" />
+    </envs>
+    <module name="app.main" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.f1.app.AppApplication" />
+    <extension name="software.aws.toolkits.jetbrains.core.execution.JavaAwsConnectionExtension">
+      <option name="credential" />
+      <option name="region" />
+      <option name="useCurrentConnection" value="false" />
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

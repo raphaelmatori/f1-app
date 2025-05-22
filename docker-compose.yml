@@ -1,103 +1,18 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: f1_mysql
-    environment:
-      MYSQL_DATABASE: f1_champions
-      MYSQL_USER: f1_user
-      MYSQL_PASSWORD: f1_password
-      MYSQL_ROOT_PASSWORD: root_password
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./mysql/init:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "f1_user", "-pf1_password"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - f1_network
-    restart: unless-stopped
-
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: f1_backend
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      MYSQL_DATABASE: f1_champions
-      MYSQL_USER: f1_user
-      MYSQL_PASSWORD: f1_password
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+    image: raphaelatori/f1-champions-backend:prod
+    restart: always
     ports:
       - "8080:8080"
-    networks:
-      - f1_network
-    restart: unless-stopped
-
-  redis:
-    image: redis:7.2-alpine
-    container_name: f1_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
-    command: redis-server /usr/local/etc/redis/redis.conf
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    networks:
-      - f1_network
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: f1_frontend
-    ports:
-      - "4000:4000"
-    depends_on:
-      - backend
     environment:
-      - BACKEND_URL=http://backend:8080
-    networks:
-      - f1_network
-    restart: unless-stopped
-
-  adminer:
-    image: adminer:latest
-    container_name: f1_adminer
-    ports:
-      - "8081:8080"
-    environment:
-      - ADMINER_DEFAULT_SERVER=f1_mysql
-      - ADMINER_DESIGN=pepa-linha
-    restart: unless-stopped
-    networks:
-      - f1_network
-
-volumes:
-  mysql_data:
-    name: f1_mysql_data
-    driver: local
-  redis_data:
-    name: f1_redis_data
-    driver: local
-
-networks:
-  f1_network:
-    name: f1_network 
+      - SPRING_PROFILES_ACTIVE=prod
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}

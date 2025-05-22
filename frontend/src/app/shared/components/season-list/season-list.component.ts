@@ -16,9 +16,9 @@ import {countryFlags} from "@app/shared/constants/country-flags";
 })
 export class SeasonListComponent implements OnInit {
   seasons: number[] = [];
-  champions: { [year: number]: Driver | undefined } = {};
-  races: { [year: number]: Race[] } = {};
-  expandedSeasons: { [year: number]: boolean } = {};
+  champions: Record<number, Driver | undefined> = {};
+  races: Record<number, Race[]> = {};
+  expandedSeasons: Record<number, boolean> = {};
   loading = true;
   error = '';
 
@@ -32,7 +32,7 @@ export class SeasonListComponent implements OnInit {
     this.f1Service.getWorldChampions().subscribe({
       next: (championsByYear) => {
         if (championsByYear) {
-          let years = Array.from(championsByYear.keys());
+          const years = Array.from(championsByYear.keys());
           years.sort((a, b) => b - a); // Descending
           years.forEach(year => {
             this.champions[year] = championsByYear.get(year);

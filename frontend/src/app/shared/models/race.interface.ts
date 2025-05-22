@@ -21,7 +21,7 @@ export interface Race {
       country: string;
     };
   };
-  Results: Array<{
+  Results: {
     number: string;
     position: string;
     positionText: string;
@@ -46,5 +46,5 @@ export interface Race {
         speed: string;
       };
     };
-  }>;
+  }[];
 } 

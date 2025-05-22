@@ -2,8 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ErgastService } from './ergast.service';
 import { environment } from 'environments/environment';
-import { Driver } from '@app/models/driver.interface';
-import {Champion} from "@app/models/champion.interface";
 
 // Mock environment endpoints if needed
 

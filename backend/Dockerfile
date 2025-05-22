@@ -1,5 +1,5 @@
 # Build stage
-FROM openjdk:17-slim as build
+FROM openjdk:17-slim AS build
 WORKDIR /workspace/app
 
 COPY gradlew .
@@ -13,7 +13,7 @@ RUN ./gradlew clean build -x test
 # Run stage
 FROM openjdk:17-slim
 WORKDIR /app
-COPY --from=build /workspace/app/build/libs/*.jar app.jar
+COPY --from=build /workspace/app/build/libs/app-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"] 
+ENTRYPOINT ["java", "-jar", "app.jar"]
