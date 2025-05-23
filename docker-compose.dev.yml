@@ -66,14 +66,14 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: f1_frontend
     ports:
       - "4000:80"
     depends_on:
       - backend
     environment:
-      - BACKEND_URL=http://backend:8080
+      - BACKEND_URL=http://localhost:8080
     networks:
       - f1_network
     restart: unless-stopped

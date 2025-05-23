@@ -4,11 +4,5 @@ export const environment = {
   endpoints: {
     allRacesWinnersOfAYear: (year: number) => `races/${year}`,
     worldChampions: `champions`,
-  },
-  config: {
-    pagination: {
-      pageLimit: 30,
-    },
-    initialYearForF1Series: 1950,
-  },
+  }
 };

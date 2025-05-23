@@ -5,6 +5,7 @@ import com.f1.app.model.Champion;
 import com.f1.app.repository.ChampionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -83,6 +84,7 @@ public class ChampionService {
         }
     }
 
+    @Cacheable(value = "champions")
     public ResponseEntity<List<Champion>> getChampions() {
         try {
             List<Champion> champions = championRepository.findAll();

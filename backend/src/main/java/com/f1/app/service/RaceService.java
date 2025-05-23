@@ -1,7 +1,7 @@
 package com.f1.app.service;
 
 import com.f1.app.dto.ErgastRaceResponse;
-import com.f1.app.dto.ErgastRaceResponse.*;
+import com.f1.app.dto.RaceDTO;
 import com.f1.app.model.Race;
 import com.f1.app.model.RaceResult;
 import com.f1.app.repository.RaceRepository;
@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -42,13 +43,16 @@ public class RaceService {
         this.ergastApiService = ergastApiService;
     }
 
-    public List<Race> getRacesByYear(Integer year) {
+    @Cacheable(value = "races", key = "#year")
+    public List<RaceDTO> getRacesByYear(Integer year) {
         try {
             // Try Redis cache first
-            Optional<List<Race>> redisCacheResult = getFromRedisCache(year);
+            Optional<List<RaceDTO>> redisCacheResult = getFromRedisCache(year);
             if (redisCacheResult.isPresent()) {
                 log.debug("Redis cache hit for year: {}", year);
                 return redisCacheResult.get();
+            } else {
+                log.debug("Redis cache not found for year: {}", year);
             }
         } catch (Exception e) {
             log.error("Error accessing Redis cache: {}", e.getMessage());
@@ -57,6 +61,7 @@ public class RaceService {
 
         // Then check database
         List<Race> cachedRaces = new ArrayList<>();
+        List<RaceDTO> raceDTOs;
         try {
             cachedRaces = raceRepository.findBySeason(year);
         } catch (Exception e) {
@@ -65,38 +70,44 @@ public class RaceService {
         }
         if (!cachedRaces.isEmpty()) {
             log.debug("Found races for year {} in database", year);
+
+            raceDTOs = cachedRaces.stream()
+                    .map(RaceDTO::fromEntity)
+                    .collect(Collectors.toList());
+
             try {
-                putInRedisCache(year, cachedRaces);
+                putInRedisCache(year, raceDTOs);
             } catch (Exception e) {
                 log.error("Failed to update Redis cache: {}", e.getMessage());
                 // Continue with database results
             }
-            return cachedRaces;
+            return raceDTOs;
         }
 
         // Use the retryable method from RaceApiService
         return ergastApiService.fetchAndSaveRaces(year, baseUrl);
     }
 
-    private Optional<List<Race>> getFromRedisCache(Integer year) {
+    private Optional<List<RaceDTO>> getFromRedisCache(Integer year) {
         try {
             return Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
                     .map(cache -> cache.get(year))
                     .map(cacheValue -> {
                         if (cacheValue != null) {
                             @SuppressWarnings("unchecked")
-                            List<Race> races = (List<Race>) cacheValue.get();
+                            List<RaceDTO> races = (List<RaceDTO>) cacheValue.get();
                             return races;
                         }
                         return null;
                     });
         } catch (Exception e) {
             log.error("Error accessing Redis cache for year {}: {}", year, e.getMessage());
+            e.printStackTrace();
             return Optional.empty();
         }
     }
 
-    private void putInRedisCache(Integer year, List<Race> races) {
+    private void putInRedisCache(Integer year, List<RaceDTO> races) {
         try {
             Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
                     .ifPresent(cache -> {

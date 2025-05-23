@@ -6,11 +6,13 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -37,6 +39,7 @@ import lombok.ToString;
 @EqualsAndHashCode(exclude = "results")
 @Table(name = "races")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Race implements Serializable {
     
     private static final long serialVersionUID = 1L;
@@ -54,17 +57,23 @@ public class Race implements Serializable {
     @Embedded
     private Circuit circuit;
     
-    @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     @JsonManagedReference
     private List<RaceResult> results = new ArrayList<>();
     
     public void addResult(RaceResult result) {
+        if (results == null) {
+            results = new ArrayList<>();
+        }
         results.add(result);
         result.setRace(this);
     }
     
     public void setResults(List<RaceResult> results) {
+        if (this.results == null) {
+            this.results = new ArrayList<>();
+        }
         this.results.clear();
         if (results != null) {
             results.forEach(this::addResult);

@@ -1,5 +1,6 @@
 package com.f1.app.controller;
 
+import com.f1.app.dto.RaceDTO;
 import com.f1.app.model.Race;
 import com.f1.app.service.RaceService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,7 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:4000")
+@CrossOrigin(origins = {"http://localhost:4000", "http://localhost:4200", "https://f1-world-champions.vercel.app"})
 @Tag(name = "Races", description = "F1 Race Results API")
 public class RaceController {
 
@@ -45,11 +46,11 @@ public class RaceController {
         )
     })
     @GetMapping("/races/{year}")
-    public ResponseEntity<List<Race>> getRacesByYear(
+    public ResponseEntity<List<RaceDTO>> getRacesByYear(
         @Parameter(description = "Year to get races for (e.g. 2023)")
         @PathVariable Integer year
     ) {
-        List<Race> races = raceService.getRacesByYear(year);
+        List<RaceDTO> races = raceService.getRacesByYear(year);
         return races.isEmpty() 
             ? ResponseEntity.notFound().build()
             : ResponseEntity.ok(races);

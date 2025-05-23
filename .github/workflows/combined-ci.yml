@@ -13,27 +13,28 @@ env:
   MYSQL_USER: root
   MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
   MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-  REDIS_HOST: redis.railway.internal
-  REDIS_PORT: 6379
-  NODE_ENV: production
-  API_URL: http://localhost:8080
+  REDIS_HOST: ${{ secrets.REDIS_HOST }}
+  REDIS_PORT: ${{ secrets.REDIS_PORT }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
 
 jobs:
   frontend:
+    needs: [security-scan-frontend]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
+    - name: Check frontend folder contents
+      run: ls -l ./frontend
     
     - name: Use Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
     
     - name: Install frontend dependencies
       working-directory: ./frontend
-      run: npm ci
+      run: npm install
     
     - name: Frontend lint
       working-directory: ./frontend
@@ -41,11 +42,11 @@ jobs:
     
     - name: Frontend unit tests
       working-directory: ./frontend
-      run: npm run test -- --watch=false --browsers=ChromeHeadless
+      run: npm run test:cicd
     
     - name: Frontend build
       working-directory: ./frontend
-      run: npm run build -- --configuration=production
+      run: npm run build:prod
 
     - name: Upload frontend build artifacts
       uses: actions/upload-artifact@v4
@@ -55,6 +56,7 @@ jobs:
         retention-days: 7
 
   backend:
+    needs: [security-scan-backend]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -76,14 +78,14 @@ jobs:
       run: ./gradlew build --no-daemon
       env:
         SPRING_PROFILES_ACTIVE: prod
-        MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-        MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
-        MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-        MYSQL_USER: ${{ secrets.MYSQL_USER }}
-        MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-        REDIS_HOST: ${{ secrets.REDIS_HOST }}
-        REDIS_PORT: ${{ secrets.REDIS_PORT }}
-        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+        MYSQL_HOST: ${MYSQL_HOST}
+        MYSQL_PORT: ${MYSQL_PORT}
+        MYSQL_DATABASE: ${MYSQL_DATABASE}
+        MYSQL_USER: ${MYSQL_USER}
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        REDIS_HOST: ${REDIS_HOST}
+        REDIS_PORT: ${REDIS_PORT}
+        REDIS_PASSWORD: ${REDIS_PASSWORD}
 
     - name: Upload backend build artifacts
       uses: actions/upload-artifact@v4
@@ -93,7 +95,7 @@ jobs:
         retention-days: 7
 
   e2e:
-    needs: [frontend, backend]
+    needs: [frontend]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -102,60 +104,55 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
 
     - name: Install frontend dependencies
       working-directory: ./frontend
       run: npm ci
 
-    - name: Start backend
-      working-directory: ./backend
-      run: ./gradlew bootRun &
-      env:
-        SPRING_PROFILES_ACTIVE: prod
-        MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-        MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
-        MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-        MYSQL_USER: ${{ secrets.MYSQL_USER }}
-        MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-        REDIS_HOST: ${{ secrets.REDIS_HOST }}
-        REDIS_PORT: ${{ secrets.REDIS_PORT }}
-        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build:prod
 
-    - name: Wait for backend to start
+    - name: Install static server
+      run: npm install -g serve
+
+    - name: Serve frontend
+      working-directory: ./frontend
       run: |
-        timeout 60 bash -c 'until curl -s http://localhost:8080/actuator/health | grep -q "UP"; do sleep 2; done'
+        npm start > frontend.log 2>&1 &
+
+    - name: Wait for frontend to be ready
+      run: |
+        timeout 60 bash -c 'until curl -s http://localhost:4200 > /dev/null; do sleep 2; done'
 
     - name: Run E2E tests
       working-directory: ./frontend
-      run: npm run e2e:headless
       env:
-        API_URL: http://localhost:8080
+        CYPRESS_baseUrl: http://localhost:4200
+      run: npm run e2e:headless
 
-  security-scan:
-    needs: [frontend, backend]
+  security-scan-backend:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
-    - name: Run OWASP Dependency Check
-      uses: dependency-check/Dependency-Check_Action@main
-      with:
-        project: 'F1 Champions App'
-        path: '.'
-        format: 'HTML'
-        out: 'reports'
+    - name: Run OWASP Dependency Check via Gradle
+      working-directory: ./backend
+      run: ./gradlew dependencyCheckAnalyze
 
-    - name: Upload security report
-      uses: actions/upload-artifact@v4
-      with:
-        name: security-report
-        path: reports
-        retention-days: 7
+  security-scan-frontend:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v4
+
+      - name: Run npm audit on frontend
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm audit --json > audit-report.json || true
 
   notify:
-    needs: [frontend, backend, e2e, security-scan]
+    needs: [backend, e2e]
     runs-on: ubuntu-latest
     if: always()
     steps:

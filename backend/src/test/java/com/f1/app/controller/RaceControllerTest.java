@@ -1,5 +1,6 @@
 package com.f1.app.controller;
 
+import com.f1.app.dto.RaceDTO;
 import com.f1.app.model.Race;
 import com.f1.app.service.RaceService;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +41,7 @@ class RaceControllerTest {
     @Test
     void getRacesByYear_WhenRacesExist_ReturnsOk() throws Exception {
         // Arrange
-        List<Race> races = createTestRaces();
+        List<RaceDTO> races = createTestRaces();
         when(raceService.getRacesByYear(TEST_YEAR)).thenReturn(races);
 
         // Act & Assert
@@ -58,9 +59,9 @@ class RaceControllerTest {
             .andExpect(status().isNotFound());
     }
 
-    private List<Race> createTestRaces() {
-        List<Race> races = new ArrayList<>();
-        Race race = Race.builder()
+    private List<RaceDTO> createTestRaces() {
+        List<RaceDTO> races = new ArrayList<>();
+        RaceDTO race = RaceDTO.fromEntity(Race.builder()
             .season(TEST_YEAR)
             .round(1)
             .raceName("Test Grand Prix")
@@ -71,7 +72,7 @@ class RaceControllerTest {
                 .locality("Test City")
                 .country("Test Country")
                 .build())
-            .build();
+            .build());
         races.add(race);
         return races;
     }

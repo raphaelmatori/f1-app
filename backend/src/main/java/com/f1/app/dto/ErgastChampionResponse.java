@@ -2,13 +2,22 @@ package com.f1.app.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ErgastChampionResponse {
     @JsonProperty("MRData")
     private MRData mrData;
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MRData {
         private String xmlns;
         private String series;
@@ -21,6 +30,9 @@ public class ErgastChampionResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class StandingsTable {
         private String driverStandings;
         private String season;
@@ -30,6 +42,9 @@ public class ErgastChampionResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class StandingsList {
         private String season;
         private String round;
@@ -38,6 +53,9 @@ public class ErgastChampionResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class DriverStanding {
         private String position;
         private String positionText;
@@ -50,6 +68,9 @@ public class ErgastChampionResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Driver {
         private String driverId;
         private String permanentNumber;
@@ -62,6 +83,9 @@ public class ErgastChampionResponse {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Constructor {
         private String constructorId;
         private String url;

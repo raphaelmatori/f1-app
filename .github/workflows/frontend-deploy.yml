@@ -29,18 +29,20 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Run Linting
+        run: npm run lint
+
       - name: Run Tests
         run: npm run test:cicd
 
       - name: Build Application
         env:
-          API_URL: ${{ secrets.API_URL }}
           API_F1_SERIES: ${{ secrets.API_F1_SERIES }}
           ENABLE_DEBUG: ${{ secrets.ENABLE_DEBUG }}
           CACHE_TIMEOUT: ${{ secrets.CACHE_TIMEOUT }}
           MAX_RETRIES: ${{ secrets.MAX_RETRIES }}
           RETRY_DELAY: ${{ secrets.RETRY_DELAY }}
-        run: ng build --configuration production --output-hashing=all --delete-output-path
+        run: npm run build
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v20
