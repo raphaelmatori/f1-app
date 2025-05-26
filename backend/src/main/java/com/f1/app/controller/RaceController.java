@@ -36,7 +36,7 @@ public class RaceController {
             description = "Races found",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = Race.class)
+                schema = @Schema(implementation = RaceDTO.class)
             )
         ),
         @ApiResponse(

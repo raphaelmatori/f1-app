@@ -6,17 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-  MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
-  MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-  MYSQL_USER: root
-  MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-  MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-  REDIS_HOST: ${{ secrets.REDIS_HOST }}
-  REDIS_PORT: ${{ secrets.REDIS_PORT }}
-  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-
 jobs:
   frontend:
     needs: [security-scan-frontend]
@@ -56,6 +45,7 @@ jobs:
         retention-days: 7
 
   backend:
+    environment: f1-world-champions
     needs: [security-scan-backend]
     runs-on: ubuntu-latest
     steps:
@@ -133,12 +123,33 @@ jobs:
 
   security-scan-backend:
     runs-on: ubuntu-latest
+    environment: f1-world-champions
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-    - name: Run OWASP Dependency Check via Gradle
-      working-directory: ./backend
-      run: ./gradlew dependencyCheckAnalyze
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Cache Dependency-Check NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.dependency-check
+          key: owasp-nvd-${{ runner.os }}
+          restore-keys: |
+            owasp-nvd-${{ runner.os }}
+
+      - name: Run OWASP Dependency Check via Gradle
+        working-directory: ./backend
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: ./gradlew dependencyCheckAnalyze --info
 
   security-scan-frontend:
       runs-on: ubuntu-latest
