@@ -1,0 +1,24 @@
+<div class="race-list">
+  <app-spinner *ngIf="loading" [loadingText]="messages.LOADING.RACE_DATA(year)" />
+  
+  <div *ngIf="!loading && (!races || races.length === 0)" class="text-center py-6 text-gray-400">
+    <p>{{ messages.ERROR.NO_RACE_DATA(year) }}</p>
+  </div>
+
+  <div *ngIf="!loading && races && races.length > 0" class="bg-gray-900 rounded-md overflow-hidden mb-4 mt-6">
+    <div class="grid grid-cols-12 gap-2 p-3 bg-gray-800 text-sm font-semibold">
+      <div class="col-span-1">#</div>
+      <div class="col-span-5">Grand Prix</div>
+      <div class="col-span-4">Winner</div>
+      <div class="col-span-2">Date</div>
+    </div>
+    <div class="race-items">
+      <app-race-item
+        *ngFor="let race of races; trackBy: trackByRound"
+        [race]="race"
+        [isCurrentSeason]="isCurrentSeason"
+        [isChampionWinner]="isChampionWinner(race)">
+      </app-race-item>
+    </div>
+  </div>
+</div> 

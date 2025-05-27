@@ -1,0 +1,16 @@
+<div class="grid grid-cols-12 gap-2 p-3 border-t border-gray-800 text-sm hover:bg-gray-800 transition-colors"
+  [class.champion-race]="isChampionWinner">
+  <div class="col-span-1 font-bold">{{ race.round }}</div>
+  <div class="col-span-5">
+    <div class="font-semibold">{{ race.raceName }}</div>
+    <div class="text-xs text-gray-400">{{ race.circuitName }}</div>
+  </div>
+  <div class="col-span-4">
+    <div class="font-semibold flex items-center">
+      <span class="inline-block w-2 h-2 rounded-full mr-2" [class.bg-red-500]="isChampionWinner" [class.bg-white]="!isChampionWinner"></span>
+      {{ race.winner?.givenName }} {{ race.winner?.familyName }}
+    </div>
+    <div class="text-xs text-gray-400">{{ countryFlags[race.winner?.nationality || ''] }} {{ race.winner?.nationality || '' }}</div>
+  </div>
+  <div class="col-span-2 text-gray-300">{{ race.date | dateFormat }}</div>
+</div> 

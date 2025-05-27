@@ -1,16 +1,23 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { F1Service } from '@app/shared/services/interfaces/f1.service.interface';
-import { Driver } from '@app/shared/models/driver.interface';
 import { Race } from '@app/shared/models/race.interface';
 import { SpinnerComponent } from "@app/shared/components/spinner/spinner.component";
 import { HttpClientModule } from "@angular/common/http";
-import {countryFlags} from "@app/shared/constants/country-flags";
+import { countryFlags } from "@app/shared/constants/country-flags";
+import { MESSAGES } from './constants/messages';
+import {
+  CurrentSeasonCardComponent
+} from "@app/shared/components/season-list/components/current-season-card/current-season-card.component";
+import {
+  PastSeasonCardComponent
+} from "@app/shared/components/season-list/components/past-season-card/past-season-card.component";
+import { Driver } from '@app/models/driver.interface';
 
 @Component({
   selector: 'app-season-list',
   standalone: true,
-  imports: [CommonModule, SpinnerComponent, HttpClientModule],
+  imports: [CommonModule, SpinnerComponent, CurrentSeasonCardComponent, PastSeasonCardComponent, HttpClientModule],
   templateUrl: './season-list.component.html',
   styleUrls: ['./season-list.component.scss']
 })
@@ -21,25 +28,37 @@ export class SeasonListComponent implements OnInit {
   expandedSeasons: Record<number, boolean> = {};
   loading = true;
   error = '';
+  currentYear = 0;
 
-  constructor(private f1Service: F1Service) {}
+  constructor(private f1Service: F1Service) {
+  }
+
+  protected readonly messages = MESSAGES;
 
   ngOnInit(): void {
     this.fetchSeasonsAndChampions();
   }
 
   fetchSeasonsAndChampions() {
+    const auxChampionList: Record<number, Driver | undefined> | Driver[]= [];
     this.f1Service.getWorldChampions().subscribe({
       next: (championsByYear) => {
         if (championsByYear) {
           const years = Array.from(championsByYear.keys());
           years.sort((a, b) => b - a); // Descending
-          years.forEach(year => {
-            this.champions[year] = championsByYear.get(year);
-          });
+          this.currentYear = years[0] + 1;
 
+          years.forEach(year => {
+            const driver = championsByYear.get(year);
+            if(driver) {
+              auxChampionList[year] = driver;
+            }
+
+          });
           this.seasons = years;
+          this.champions = auxChampionList;
         }
+
         this.loading = false;
         this.error = '';
       },

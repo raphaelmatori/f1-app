@@ -1,0 +1,8 @@
+.champion-race {
+  background: linear-gradient(90deg, rgb(203 255 0 / 10%) 0%, rgb(255 255 0 / 49%) 100%);
+  border-left: 4px solid #e53e3e;
+  
+  &:hover {
+    background-color: rgba(229, 62, 62, 0.2);
+  }
+} 

@@ -115,13 +115,23 @@ public class ChampionService {
                     .map(ChampionDTO::fromEntity)
                     .collect(Collectors.toList());
             
+            if (champions.isEmpty()) {
+                throw new ServiceException(
+                    "No champions found",
+                    "NO_CHAMPIONS_FOUND",
+                    HttpStatus.NOT_FOUND.value()
+                );
+            }
+            
             return ResponseEntity.ok(champions);
+        } catch (ServiceException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error fetching champions", e);
             throw new ServiceException(
-                    "Failed to fetch champions",
-                    "CHAMPIONS_FETCH_ERROR",
-                    HttpStatus.INTERNAL_SERVER_ERROR.value()
+                "Failed to fetch champions",
+                "CHAMPIONS_FETCH_ERROR",
+                HttpStatus.INTERNAL_SERVER_ERROR.value()
             );
         }
     }
@@ -132,7 +142,11 @@ public class ChampionService {
             if (year == java.time.Year.now().getValue()) {
                 SeasonInfo seasonInfo = seasonInfoRepository.findByYear(year);
                 if (seasonInfo == null || !seasonInfo.isChampionAvailableForCurrentYear()) {
-                    return ResponseEntity.notFound().build();
+                    throw new ServiceException(
+                        String.format("Champion data for year %d is not yet available", year),
+                        "CHAMPION_NOT_AVAILABLE",
+                        HttpStatus.NOT_FOUND.value()
+                    );
                 }
             }
 
@@ -143,7 +157,11 @@ public class ChampionService {
 
             ResponseEntity<Champion> apiResponse = ergastApiService.fetchWorldChampion(year);
             if (apiResponse.getStatusCode() != HttpStatus.OK || apiResponse.getBody() == null) {
-                return ResponseEntity.notFound().build();
+                throw new ServiceException(
+                    String.format("No champion found for year %d", year),
+                    "CHAMPION_NOT_FOUND",
+                    HttpStatus.NOT_FOUND.value()
+                );
             }
 
             Champion champion = apiResponse.getBody();
@@ -160,9 +178,9 @@ public class ChampionService {
         } catch (Exception e) {
             log.error("Error fetching champion for year {}", year, e);
             throw new ServiceException(
-                    "Failed to fetch champion data",
-                    "CHAMPION_FETCH_ERROR",
-                    HttpStatus.INTERNAL_SERVER_ERROR.value()
+                "Failed to fetch champion data",
+                "CHAMPION_FETCH_ERROR",
+                HttpStatus.INTERNAL_SERVER_ERROR.value()
             );
         }
     }

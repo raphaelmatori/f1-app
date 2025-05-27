@@ -13,7 +13,6 @@
     "e2e:headless": "cypress run",
     "e2e:coverage": "cypress run --env coverage=true",
     "test:all": "npm run test && npm run e2e:headless",
-    "test:coverage": "npm run test:coverage && npm run e2e:coverage",
     "deps:check": "npm audit && npx depcheck",
     "deps:fix": "npm audit fix && npm update",
     "lint": "ng lint"

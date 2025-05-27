@@ -35,8 +35,6 @@ npm start
 # Run unit tests
 npm test
 
-# Run with coverage
-npm run test:coverage
 ```
 
 ### E2E Tests
