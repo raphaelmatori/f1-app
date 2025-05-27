@@ -1,21 +1,21 @@
 package com.f1.app.controller;
 
-import com.f1.app.model.Champion;
-import com.f1.app.service.ChampionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.anyInt;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import com.f1.app.dto.ChampionDTO;
+import com.f1.app.service.ChampionService;
 
 @ExtendWith(MockitoExtension.class)
 class ChampionControllerTest {
@@ -37,7 +37,7 @@ class ChampionControllerTest {
     @Test
     void getChampion_WhenChampionExists_ReturnsOk() throws Exception {
         // Arrange
-        Champion champion = createTestChampion();
+        ChampionDTO champion = createTestChampion();
         when(championService.getChampion(TEST_YEAR)).thenReturn(ResponseEntity.ok(champion));
 
         // Act & Assert
@@ -55,16 +55,16 @@ class ChampionControllerTest {
             .andExpect(status().isNotFound());
     }
 
-    private Champion createTestChampion() {
-        return new Champion(
-            TEST_YEAR,
-            "max_verstappen",
-            "VER",
-            "Max",
-            "Verstappen",
-            "Dutch",
-            454.0f,
-            19
-        );
+    private ChampionDTO createTestChampion() {
+        return ChampionDTO.builder()
+            .year(TEST_YEAR)
+            .driverId("max_verstappen")
+            .code("VER")
+            .givenName("Max")
+            .familyName("Verstappen")
+            .nationality("Dutch")
+            .points(454.0f)
+            .wins(19)
+            .build();
     }
 }

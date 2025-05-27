@@ -1,22 +1,32 @@
 package com.f1.app.service;
 
-import com.f1.app.exception.ServiceException;
-import com.f1.app.model.Champion;
-import com.f1.app.repository.ChampionRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.*;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import com.f1.app.dto.ChampionDTO;
+import com.f1.app.exception.ServiceException;
+import com.f1.app.model.Champion;
+import com.f1.app.repository.ChampionRepository;
 
 class ChampionServiceTest {
 
@@ -33,11 +43,13 @@ class ChampionServiceTest {
     private RedisTemplate<String, Object> redisTemplate;
 
     private Champion testChampion;
+    private ChampionDTO testChampionDTO;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         testChampion = new Champion(2023, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 19);
+        testChampionDTO = ChampionDTO.fromEntity(testChampion);
     }
 
     @Test
@@ -48,10 +60,12 @@ class ChampionServiceTest {
         );
         when(championRepository.findAll()).thenReturn(expectedChampions);
 
-        ResponseEntity<List<Champion>> response = championService.getChampions();
+        ResponseEntity<List<ChampionDTO>> response = championService.getChampions();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(expectedChampions, response.getBody());
+        assertNotNull(response.getBody());
+        assertEquals(2, response.getBody().size());
+        assertEquals(expectedChampions.get(0).getDriverId(), response.getBody().get(0).getDriverId());
         verify(championRepository).findAll();
     }
 
@@ -69,10 +83,11 @@ class ChampionServiceTest {
     void getChampion_WhenExistsInDatabase_ShouldReturnChampion() {
         when(championRepository.findByYear(2023)).thenReturn(Optional.of(testChampion));
 
-        ResponseEntity<Champion> response = championService.getChampion(2023);
+        ResponseEntity<ChampionDTO> response = championService.getChampion(2023);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(testChampion, response.getBody());
+        assertNotNull(response.getBody());
+        assertEquals(testChampion.getDriverId(), response.getBody().getDriverId());
         verify(championRepository).findByYear(2023);
         verify(ergastApiService, never()).fetchWorldChampion(anyInt());
     }
@@ -83,10 +98,11 @@ class ChampionServiceTest {
         when(ergastApiService.fetchWorldChampion(2023)).thenReturn(ResponseEntity.ok(testChampion));
         when(championRepository.save(testChampion)).thenReturn(testChampion);
 
-        ResponseEntity<Champion> response = championService.getChampion(2023);
+        ResponseEntity<ChampionDTO> response = championService.getChampion(2023);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(testChampion, response.getBody());
+        assertNotNull(response.getBody());
+        assertEquals(testChampion.getDriverId(), response.getBody().getDriverId());
         verify(championRepository).findByYear(2023);
         verify(ergastApiService).fetchWorldChampion(2023);
         verify(championRepository).save(testChampion);
@@ -109,10 +125,11 @@ class ChampionServiceTest {
         when(ergastApiService.fetchWorldChampion(2023)).thenReturn(ResponseEntity.ok(testChampion));
         when(championRepository.save(testChampion)).thenThrow(new RuntimeException("Database error"));
 
-        ResponseEntity<Champion> response = championService.getChampion(2023);
+        ResponseEntity<ChampionDTO> response = championService.getChampion(2023);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(testChampion, response.getBody());
+        assertNotNull(response.getBody());
+        assertEquals(testChampion.getDriverId(), response.getBody().getDriverId());
         verify(championRepository).findByYear(2023);
         verify(ergastApiService).fetchWorldChampion(2023);
         verify(championRepository).save(testChampion);

@@ -1,10 +1,11 @@
 package com.f1.app.service;
 
-import com.f1.app.exception.ServiceException;
-import com.f1.app.model.Champion;
-import com.f1.app.repository.ChampionRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,12 +14,14 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.f1.app.dto.ChampionDTO;
+import com.f1.app.exception.ServiceException;
+import com.f1.app.model.Champion;
+import com.f1.app.repository.ChampionRepository;
+
 import jakarta.annotation.PostConstruct;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -85,9 +88,11 @@ public class ChampionService {
     }
 
     @Cacheable(value = "champions")
-    public ResponseEntity<List<Champion>> getChampions() {
+    public ResponseEntity<List<ChampionDTO>> getChampions() {
         try {
-            List<Champion> champions = championRepository.findAll();
+            List<ChampionDTO> champions = championRepository.findAll().stream()
+                    .map(ChampionDTO::fromEntity)
+                    .collect(Collectors.toList());
             return ResponseEntity.ok(champions);
         } catch (Exception e) {
             log.error("Error fetching champions", e);
@@ -99,11 +104,11 @@ public class ChampionService {
         }
     }
 
-    public ResponseEntity<Champion> getChampion(int year) {
+    public ResponseEntity<ChampionDTO> getChampion(int year) {
         try {
             Optional<Champion> existingChampion = championRepository.findByYear(year);
             if (existingChampion.isPresent()) {
-                return ResponseEntity.ok(existingChampion.get());
+                return ResponseEntity.ok(ChampionDTO.fromEntity(existingChampion.get()));
             }
 
             ResponseEntity<Champion> apiResponse = ergastApiService.fetchWorldChampion(year);
@@ -123,7 +128,7 @@ public class ChampionService {
                 // Continue execution as we still have the champion data
             }
 
-            return ResponseEntity.ok(champion);
+            return ResponseEntity.ok(ChampionDTO.fromEntity(champion));
         } catch (ServiceException e) {
             throw e;
         } catch (Exception e) {

@@ -102,7 +102,7 @@ Once the backend is running, you can access the API documentation at:
 - [x] Highlight champion in race list
 - [x] Frontend Components (Angular SPA: season list, race list, highlight champion, error/loading states)
 - [x] End-to-End Tests (frontend and backend integration)
-- [ ] CI/CD pipeline (GitHub Actions or similar: install → lint → test → build, reject on test failure)
+- [x] CI/CD pipeline (GitHub Actions or similar: install → lint → test → build, reject on test failure)
 - [x] Dockerization: Multi-stage Dockerfiles, single docker-compose.yml for backend, DB, (optionally frontend)
 - [ ] Healthchecks & environment variables in Docker
 - [ ] Documentation: High-level architecture, API contract/schema, screenshots/diagrams
@@ -112,7 +112,8 @@ Once the backend is running, you can access the API documentation at:
 - [x] Automatic deploy to free tier platform (Render, Railway, Fly.io, etc.)
 - [x] Docker image pushed to public registry (optional)
 - [ ] Async job to refresh seasons weekly after every race (optional, nice to have)
-- [x] SSR/SSG (Next.js/Nuxt) or Lighthouse score ≥ 90 (optional, nice to have)
+- [ ] SSR/SSG (Next.js/Nuxt)
+- [x] Lighthouse score ≥ 90 (optional, nice to have)
 - [ ] Seed script for DB (optional)
 
 ## Contributing

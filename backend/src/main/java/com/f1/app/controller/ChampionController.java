@@ -1,7 +1,17 @@
 package com.f1.app.controller;
 
-import com.f1.app.model.Champion;
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.f1.app.dto.ChampionDTO;
 import com.f1.app.service.ChampionService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,10 +21,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -36,12 +42,12 @@ public class ChampionController {
                     description = "Champions found",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = Champion.class)
+                            schema = @Schema(implementation = ChampionDTO.class)
                     )
             )
     })
     @GetMapping("/champions")
-    public ResponseEntity<List<Champion>> getChampions() {
+    public ResponseEntity<List<ChampionDTO>> getChampions() {
         return championService.getChampions();
     }
     
@@ -55,7 +61,7 @@ public class ChampionController {
             description = "Champion found",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = Champion.class)
+                schema = @Schema(implementation = ChampionDTO.class)
             )
         ),
         @ApiResponse(
@@ -65,7 +71,7 @@ public class ChampionController {
         )
     })
     @GetMapping("/champions/{year}")
-    public ResponseEntity<Champion> getChampion(
+    public ResponseEntity<ChampionDTO> getChampion(
         @Parameter(description = "Year to get champion for (e.g. 2023)")
         @PathVariable Integer year
     ) {
