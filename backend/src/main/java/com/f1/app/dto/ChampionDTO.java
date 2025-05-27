@@ -1,7 +1,6 @@
 package com.f1.app.dto;
 
 import com.f1.app.model.Champion;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

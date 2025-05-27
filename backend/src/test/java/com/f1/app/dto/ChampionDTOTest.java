@@ -1,11 +1,9 @@
 package com.f1.app.dto;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import com.f1.app.model.Champion;
 import org.junit.jupiter.api.Test;
 
-import com.f1.app.model.Champion;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ChampionDTOTest {
 
@@ -22,14 +20,14 @@ class ChampionDTOTest {
     void fromEntity_WhenValidEntity_CreatesMatchingDTO() {
         // Arrange
         Champion champion = new Champion(
-            TEST_YEAR,
-            DRIVER_ID,
-            CODE,
-            GIVEN_NAME,
-            FAMILY_NAME,
-            NATIONALITY,
-            POINTS,
-            WINS
+                TEST_YEAR,
+                DRIVER_ID,
+                CODE,
+                GIVEN_NAME,
+                FAMILY_NAME,
+                NATIONALITY,
+                POINTS,
+                WINS
         );
 
         // Act
@@ -56,15 +54,15 @@ class ChampionDTOTest {
     void builder_CreatesValidDTO() {
         // Act
         ChampionDTO dto = ChampionDTO.builder()
-            .year(TEST_YEAR)
-            .driverId(DRIVER_ID)
-            .code(CODE)
-            .givenName(GIVEN_NAME)
-            .familyName(FAMILY_NAME)
-            .nationality(NATIONALITY)
-            .points(POINTS)
-            .wins(WINS)
-            .build();
+                .year(TEST_YEAR)
+                .driverId(DRIVER_ID)
+                .code(CODE)
+                .givenName(GIVEN_NAME)
+                .familyName(FAMILY_NAME)
+                .nationality(NATIONALITY)
+                .points(POINTS)
+                .wins(WINS)
+                .build();
 
         // Assert
         assertNotNull(dto);

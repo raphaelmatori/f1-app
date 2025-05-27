@@ -22,9 +22,9 @@ class GlobalExceptionHandlerTest {
     void handleServiceException_ShouldReturnCorrectErrorResponse() {
         // Arrange
         ServiceException exception = new ServiceException(
-            "Test error message",
-            "TEST_ERROR",
-            HttpStatus.BAD_REQUEST.value()
+                "Test error message",
+                "TEST_ERROR",
+                HttpStatus.BAD_REQUEST.value()
         );
 
         // Act
@@ -81,10 +81,10 @@ class GlobalExceptionHandlerTest {
         // Arrange
         Throwable cause = new RuntimeException("Original error");
         ServiceException exception = new ServiceException(
-            "Test error message",
-            "TEST_ERROR",
-            HttpStatus.BAD_REQUEST.value(),
-            cause
+                "Test error message",
+                "TEST_ERROR",
+                HttpStatus.BAD_REQUEST.value(),
+                cause
         );
 
         // Act

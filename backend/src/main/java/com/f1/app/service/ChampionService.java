@@ -1,11 +1,12 @@
 package com.f1.app.service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
+import com.f1.app.dto.ChampionDTO;
+import com.f1.app.exception.ServiceException;
+import com.f1.app.model.Champion;
+import com.f1.app.repository.ChampionRepository;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,14 +15,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.f1.app.dto.ChampionDTO;
-import com.f1.app.exception.ServiceException;
-import com.f1.app.model.Champion;
-import com.f1.app.repository.ChampionRepository;
-
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Service
@@ -75,14 +73,14 @@ public class ChampionService {
                     log.error("Failed to fetch and save champion for year {}: {}", year, e.getMessage());
                 }
             }
-            
+
             log.info("Champion data initialization completed");
         } catch (Exception e) {
             log.error("Error initializing champion data", e);
             throw new ServiceException(
-                "Failed to initialize champion data",
-                "CHAMPION_INIT_ERROR",
-                HttpStatus.INTERNAL_SERVER_ERROR.value()
+                    "Failed to initialize champion data",
+                    "CHAMPION_INIT_ERROR",
+                    HttpStatus.INTERNAL_SERVER_ERROR.value()
             );
         }
     }
@@ -97,9 +95,9 @@ public class ChampionService {
         } catch (Exception e) {
             log.error("Error fetching champions", e);
             throw new ServiceException(
-                "Failed to fetch champions",
-                "CHAMPIONS_FETCH_ERROR",
-                HttpStatus.INTERNAL_SERVER_ERROR.value()
+                    "Failed to fetch champions",
+                    "CHAMPIONS_FETCH_ERROR",
+                    HttpStatus.INTERNAL_SERVER_ERROR.value()
             );
         }
     }
@@ -114,9 +112,9 @@ public class ChampionService {
             ResponseEntity<Champion> apiResponse = ergastApiService.fetchWorldChampion(year);
             if (apiResponse.getStatusCode() != HttpStatus.OK || apiResponse.getBody() == null) {
                 throw new ServiceException(
-                    "Failed to fetch champion data from external API",
-                    "CHAMPION_API_ERROR",
-                    HttpStatus.SERVICE_UNAVAILABLE.value()
+                        "Failed to fetch champion data from external API",
+                        "CHAMPION_API_ERROR",
+                        HttpStatus.SERVICE_UNAVAILABLE.value()
                 );
             }
 
@@ -134,9 +132,9 @@ public class ChampionService {
         } catch (Exception e) {
             log.error("Error fetching champion for year {}", year, e);
             throw new ServiceException(
-                "Failed to fetch champion data",
-                "CHAMPION_FETCH_ERROR",
-                HttpStatus.INTERNAL_SERVER_ERROR.value()
+                    "Failed to fetch champion data",
+                    "CHAMPION_FETCH_ERROR",
+                    HttpStatus.INTERNAL_SERVER_ERROR.value()
             );
         }
     }

@@ -1,37 +1,5 @@
 package com.f1.app.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import org.mockito.MockitoAnnotations;
-import org.springframework.cache.Cache;
-import org.springframework.context.ApplicationContext;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
-
 import com.f1.app.dto.ErgastChampionResponse;
 import com.f1.app.dto.ErgastRaceResponse;
 import com.f1.app.dto.RaceDTO;
@@ -40,8 +8,30 @@ import com.f1.app.model.Race;
 import com.f1.app.model.RaceResult;
 import com.f1.app.repository.ChampionRepository;
 import com.f1.app.repository.RaceRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.cache.Cache;
+import org.springframework.context.ApplicationContext;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 class ErgastApiServiceTest {
+    private final int TEST_YEAR = 2023;
     @Mock
     private RestTemplate restTemplate;
     @Mock
@@ -54,11 +44,8 @@ class ErgastApiServiceTest {
     private Cache redisCache;
     @Mock
     private ApplicationContext applicationContext;
-
     @InjectMocks
     private ErgastApiService ergastApiService;
-
-    private final int TEST_YEAR = 2023;
 
     @BeforeEach
     void setUp() {
@@ -132,7 +119,7 @@ class ErgastApiServiceTest {
     @Test
     void fetchWorldChampion_WhenApiThrowsException_TriggersRetry() {
         when(restTemplate.getForObject(anyString(), eq(ErgastChampionResponse.class)))
-            .thenThrow(new RestClientException("API error"));
+                .thenThrow(new RestClientException("API error"));
         assertThrows(RestClientException.class, () -> ergastApiService.fetchWorldChampion(TEST_YEAR));
     }
 
@@ -349,8 +336,8 @@ class ErgastApiServiceTest {
         when(restTemplate.getForEntity(anyString(), eq(ErgastRaceResponse.class)))
                 .thenReturn(ResponseEntity.ok(null));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> 
-            ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url"));
+        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+                ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url"));
         assertEquals("Failed to fetch races", exception.getMessage());
     }
 
@@ -442,13 +429,13 @@ class ErgastApiServiceTest {
         when(raceRepository.save(any(Race.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         List<RaceDTO> result = ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url");
-        
+
         assertNotNull(result);
         assertEquals(1, result.size());
         RaceDTO raceDTO = result.get(0);
         assertNotNull(raceDTO.getResults());
         assertEquals(2, raceDTO.getResults().size());
-        
+
         verify(restTemplate, times(2)).getForEntity(anyString(), eq(ErgastRaceResponse.class));
     }
 
@@ -507,9 +494,9 @@ class ErgastApiServiceTest {
                         .location(null)
                         .build())
                 .build();
-        
+
         Race race = invokeMapToRace(raceData);
-        
+
         assertNotNull(race);
         assertNotNull(race.getCircuit());
         assertNull(race.getCircuit().getLocality());
@@ -524,9 +511,9 @@ class ErgastApiServiceTest {
                 .raceName("Test GP")
                 .results(new ArrayList<>())
                 .build();
-        
+
         Race race = invokeMapToRace(raceData);
-        
+
         assertNotNull(race);
         assertNotNull(race.getResults());
         assertEquals(0, race.getResults().size());
@@ -542,8 +529,8 @@ class ErgastApiServiceTest {
         when(restTemplate.getForEntity(anyString(), eq(ErgastRaceResponse.class)))
                 .thenReturn(ResponseEntity.ok(response));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> 
-            ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url"));
+        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+                ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url"));
         assertEquals("Failed to fetch races", exception.getMessage());
     }
 
@@ -559,8 +546,8 @@ class ErgastApiServiceTest {
         when(restTemplate.getForEntity(anyString(), eq(ErgastRaceResponse.class)))
                 .thenReturn(ResponseEntity.ok(response));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> 
-            ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url"));
+        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+                ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url"));
         assertEquals("Failed to fetch races", exception.getMessage());
     }
 

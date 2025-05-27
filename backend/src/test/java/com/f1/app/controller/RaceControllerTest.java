@@ -9,7 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -24,14 +23,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class RaceControllerTest {
 
+    private final int TEST_YEAR = 2023;
     @Mock
     private RaceService raceService;
-
     @InjectMocks
     private RaceController raceController;
-
     private MockMvc mockMvc;
-    private final int TEST_YEAR = 2023;
 
     @BeforeEach
     void setUp() {
@@ -46,7 +43,7 @@ class RaceControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/races/{year}", TEST_YEAR))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -56,23 +53,23 @@ class RaceControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/races/{year}", TEST_YEAR))
-            .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound());
     }
 
     private List<RaceDTO> createTestRaces() {
         List<RaceDTO> races = new ArrayList<>();
         RaceDTO race = RaceDTO.fromEntity(Race.builder()
-            .season(TEST_YEAR)
-            .round(1)
-            .raceName("Test Grand Prix")
-            .date("2023-03-05")
-            .circuit(Race.Circuit.builder()
-                .circuitId("test_circuit")
-                .circuitName("Test Circuit")
-                .locality("Test City")
-                .country("Test Country")
-                .build())
-            .build());
+                .season(TEST_YEAR)
+                .round(1)
+                .raceName("Test Grand Prix")
+                .date("2023-03-05")
+                .circuit(Race.Circuit.builder()
+                        .circuitId("test_circuit")
+                        .circuitName("Test Circuit")
+                        .locality("Test City")
+                        .country("Test Country")
+                        .build())
+                .build());
         races.add(race);
         return races;
     }

@@ -19,9 +19,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RestClientException.class)
     public ResponseEntity<ApiError> handleRestClientException(RestClientException ex) {
         ApiError error = new ApiError(
-            "External API service error",
-            "EXTERNAL_API_ERROR",
-            HttpStatus.SERVICE_UNAVAILABLE.value()
+                "External API service error",
+                "EXTERNAL_API_ERROR",
+                HttpStatus.SERVICE_UNAVAILABLE.value()
         );
         return new ResponseEntity<>(error, HttpStatus.SERVICE_UNAVAILABLE);
     }
@@ -29,9 +29,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGenericException(Exception ex) {
         ApiError error = new ApiError(
-            "An unexpected error occurred",
-            "INTERNAL_SERVER_ERROR",
-            HttpStatus.INTERNAL_SERVER_ERROR.value()
+                "An unexpected error occurred",
+                "INTERNAL_SERVER_ERROR",
+                HttpStatus.INTERNAL_SERVER_ERROR.value()
         );
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }

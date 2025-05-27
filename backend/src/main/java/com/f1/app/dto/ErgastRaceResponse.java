@@ -1,13 +1,12 @@
 package com.f1.app.dto;
 
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Data
 @Builder
@@ -28,7 +27,7 @@ public class ErgastRaceResponse {
         private String limit;
         private String offset;
         private String total;
-        
+
         @JsonProperty("RaceTable")
         private RaceTable raceTable;
     }
@@ -40,7 +39,7 @@ public class ErgastRaceResponse {
     public static class RaceTable {
         private String season;
         private String round;
-        
+
         @JsonProperty("Races")
         private List<RaceData> races;
     }
@@ -53,16 +52,16 @@ public class ErgastRaceResponse {
         private String season;
         private String round;
         private String url;
-        
+
         @JsonProperty("raceName")
         private String raceName;
-        
+
         private String date;
         private String time;
-        
+
         @JsonProperty("Circuit")
         private CircuitData circuit;
-        
+
         @JsonProperty("Results")
         private List<ResultData> results;
     }
@@ -74,12 +73,12 @@ public class ErgastRaceResponse {
     public static class CircuitData {
         @JsonProperty("circuitId")
         private String circuitId;
-        
+
         private String url;
-        
+
         @JsonProperty("circuitName")
         private String circuitName;
-        
+
         @JsonProperty("Location")
         private LocationData location;
     }
@@ -107,13 +106,13 @@ public class ErgastRaceResponse {
         private String grid;
         private String laps;
         private String status;
-        
+
         @JsonProperty("Driver")
         private DriverData driver;
-        
+
         @JsonProperty("Constructor")
         private ConstructorData constructor;
-        
+
         @JsonProperty("Time")
         private TimeData time;
     }
@@ -125,19 +124,19 @@ public class ErgastRaceResponse {
     public static class DriverData {
         @JsonProperty("driverId")
         private String driverId;
-        
+
         private String code;
         private String url;
-        
+
         @JsonProperty("givenName")
         private String givenName;
-        
+
         @JsonProperty("familyName")
         private String familyName;
-        
+
         @JsonProperty("dateOfBirth")
         private String dateOfBirth;
-        
+
         private String nationality;
     }
 
@@ -148,7 +147,7 @@ public class ErgastRaceResponse {
     public static class ConstructorData {
         @JsonProperty("constructorId")
         private String constructorId;
-        
+
         private String url;
         private String name;
         private String nationality;

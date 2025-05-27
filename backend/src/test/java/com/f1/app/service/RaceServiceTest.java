@@ -12,16 +12,17 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.test.util.ReflectionTestUtils;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.*;
 
 class RaceServiceTest {
+    private final int TEST_YEAR = 2023;
     @Mock
     private RaceRepository raceRepository;
     @Mock
@@ -32,7 +33,6 @@ class RaceServiceTest {
     private org.springframework.cache.Cache redisCache;
     @InjectMocks
     private RaceService raceService;
-    private final int TEST_YEAR = 2023;
     private List<Race> testRaces;
     private List<RaceDTO> testRaceDTOs;
 
@@ -40,25 +40,25 @@ class RaceServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         testRaces = new ArrayList<>();
-        
+
         Race race = new Race();
         ReflectionTestUtils.setField(race, "season", TEST_YEAR);
         ReflectionTestUtils.setField(race, "round", 1);
         ReflectionTestUtils.setField(race, "raceName", "Test Grand Prix");
         ReflectionTestUtils.setField(race, "results", new ArrayList<>());
-        
+
         RaceResult result = new RaceResult();
         ReflectionTestUtils.setField(result, "position", "1");
         ReflectionTestUtils.setField(result, "points", "25");
         ReflectionTestUtils.setField(result, "status", "Finished");
         ReflectionTestUtils.setField(result, "race", race);
-        
+
         race.addResult(result);
         testRaces.add(race);
 
         testRaceDTOs = testRaces.stream()
-            .map(RaceDTO::fromEntity)
-            .collect(java.util.stream.Collectors.toList());
+                .map(RaceDTO::fromEntity)
+                .collect(java.util.stream.Collectors.toList());
 
         when(redisCacheManager.getCache(anyString())).thenReturn(redisCache);
         when(ergastApiService.fetchAndSaveRaces(anyInt(), any())).thenReturn(testRaceDTOs);
@@ -132,11 +132,11 @@ class RaceServiceTest {
         RaceDTO race = RaceDTO.fromEntity(testRaces.get(0));
         List<RaceResultDTO> raceResults = (List<RaceResultDTO>) ReflectionTestUtils.getField(race, "results");
         assertFalse(raceResults.isEmpty(), "Test race should have results");
-        
+
         // When
         when(redisCache.get(TEST_YEAR)).thenReturn(() -> testRaceDTOs);
         List<RaceDTO> result = raceService.getRacesByYear(TEST_YEAR);
-        
+
         // Then
         assertNotNull(result);
         assertFalse(result.isEmpty());
@@ -145,16 +145,16 @@ class RaceServiceTest {
         assertNotNull(cachedResults);
         assertFalse(cachedResults.isEmpty());
         assertEquals(raceResults.size(), cachedResults.size());
-        
+
         RaceResultDTO originalResult = raceResults.get(0);
         RaceResultDTO cachedResult = cachedResults.get(0);
         assertEquals(
-            ReflectionTestUtils.getField(originalResult, "position"),
-            ReflectionTestUtils.getField(cachedResult, "position")
+                ReflectionTestUtils.getField(originalResult, "position"),
+                ReflectionTestUtils.getField(cachedResult, "position")
         );
         assertEquals(
-            ReflectionTestUtils.getField(originalResult, "points"),
-            ReflectionTestUtils.getField(cachedResult, "points")
+                ReflectionTestUtils.getField(originalResult, "points"),
+                ReflectionTestUtils.getField(cachedResult, "points")
         );
     }
 } 

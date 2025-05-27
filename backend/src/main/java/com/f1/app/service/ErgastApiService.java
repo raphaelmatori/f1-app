@@ -8,19 +8,17 @@ import com.f1.app.model.Race;
 import com.f1.app.model.RaceResult;
 import com.f1.app.repository.ChampionRepository;
 import com.f1.app.repository.RaceRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.Cache;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-import org.springframework.http.ResponseEntity;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.client.RestTemplate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.http.ResponseEntity;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,17 +32,15 @@ import java.util.stream.Collectors;
 public class ErgastApiService {
     private static final int MAX_RETRIES = 3;
     private static final long INITIAL_RETRY_DELAY = 1000L;
-
-    @Value("${api.ergast.baseUrl}")
-    private String baseUrl;
-
     private final RestTemplate restTemplate;
     private final ChampionRepository championRepository;
     private final RaceRepository raceRepository;
     private final RedisCacheManager redisCacheManager;
+    @Value("${api.ergast.baseUrl}")
+    private String baseUrl;
 
     @Retryable(
-            value = { RestClientException.class },
+            value = {RestClientException.class},
             maxAttempts = MAX_RETRIES,
             backoff = @Backoff(delay = INITIAL_RETRY_DELAY, multiplier = 2)
     )
@@ -86,7 +82,7 @@ public class ErgastApiService {
     }
 
     @Retryable(
-            value = { RestClientException.class },
+            value = {RestClientException.class},
             maxAttempts = MAX_RETRIES,
             backoff = @Backoff(delay = INITIAL_RETRY_DELAY, multiplier = 2)
     )

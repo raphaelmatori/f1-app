@@ -1,10 +1,12 @@
 package com.f1.app.model;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Entity
@@ -13,7 +15,7 @@ import lombok.Builder;
 @Builder
 @Table(name = "champions")
 public class Champion {
-    
+
     @Id
     private Integer year;
     private String driverId;

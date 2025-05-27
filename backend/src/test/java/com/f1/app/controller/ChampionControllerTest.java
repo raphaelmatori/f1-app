@@ -1,33 +1,31 @@
 package com.f1.app.controller;
 
+import com.f1.app.dto.ChampionDTO;
+import com.f1.app.service.ChampionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.anyInt;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.f1.app.dto.ChampionDTO;
-import com.f1.app.service.ChampionService;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class ChampionControllerTest {
 
+    private final int TEST_YEAR = 2023;
     @Mock
     private ChampionService championService;
-
     @InjectMocks
     private ChampionController championController;
-
     private MockMvc mockMvc;
-    private final int TEST_YEAR = 2023;
 
     @BeforeEach
     void setUp() {
@@ -42,7 +40,7 @@ class ChampionControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/champions/{year}", TEST_YEAR))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -52,19 +50,19 @@ class ChampionControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/champions/{year}", TEST_YEAR))
-            .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound());
     }
 
     private ChampionDTO createTestChampion() {
         return ChampionDTO.builder()
-            .year(TEST_YEAR)
-            .driverId("max_verstappen")
-            .code("VER")
-            .givenName("Max")
-            .familyName("Verstappen")
-            .nationality("Dutch")
-            .points(454.0f)
-            .wins(19)
-            .build();
+                .year(TEST_YEAR)
+                .driverId("max_verstappen")
+                .code("VER")
+                .givenName("Max")
+                .familyName("Verstappen")
+                .nationality("Dutch")
+                .points(454.0f)
+                .wins(19)
+                .build();
     }
 }
