@@ -1,25 +1,27 @@
 package com.f1.app.service;
 
-import com.f1.app.dto.ChampionDTO;
-import com.f1.app.exception.ServiceException;
-import com.f1.app.model.Champion;
-import com.f1.app.repository.ChampionRepository;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.f1.app.dto.ChampionDTO;
+import com.f1.app.exception.ServiceException;
+import com.f1.app.model.Champion;
+import com.f1.app.model.SeasonInfo;
+import com.f1.app.repository.ChampionRepository;
+import com.f1.app.repository.SeasonInfoRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -28,15 +30,9 @@ public class ChampionService {
 
     private final ErgastApiService ergastApiService;
     private final ChampionRepository championRepository;
-
-    @PostConstruct
-    public void init() {
-        // Trigger the async initialization
-        initializeChampionData();
-    }
+    private final SeasonInfoRepository seasonInfoRepository;
 
     @Async
-    @Scheduled(initialDelay = 0)
     @Transactional
     public void initializeChampionData() {
         try {
@@ -50,15 +46,31 @@ public class ChampionService {
                     .collect(Collectors.toSet());
 
             // Create a list of years we need to fetch, from current year down to 2005
-            List<Integer> yearsToFetch = IntStream.rangeClosed(END_YEAR, currentYear)
+            // Exclude current year as we'll handle it separately
+            List<Integer> yearsToFetch = IntStream.rangeClosed(END_YEAR, currentYear - 1)
                     .boxed()
                     .filter(year -> !existingYears.contains(year))
                     .sorted((a, b) -> b.compareTo(a)) // Sort in descending order
                     .collect(Collectors.toList());
 
-            log.info("Found {} years that need to be fetched", yearsToFetch.size());
+            log.info("Found {} past years that need to be fetched", yearsToFetch.size());
 
-            // Fetch and save missing champions
+            // Always fetch current year first
+            try {
+                log.info("Fetching current year ({}) champion data...", currentYear);
+                ResponseEntity<Champion> response = ergastApiService.fetchWorldChampion(currentYear);
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    Champion champion = response.getBody();
+                    championRepository.save(champion);
+                    log.debug("Saved current year champion data");
+                }
+                // Throttle requests
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                log.error("Failed to fetch and save champion for current year {}: {}", currentYear, e.getMessage());
+            }
+
+            // Fetch and save missing champions for past years
             for (Integer year : yearsToFetch) {
                 try {
                     ResponseEntity<Champion> response = ergastApiService.fetchWorldChampion(year);
@@ -88,9 +100,21 @@ public class ChampionService {
     @Cacheable(value = "champions")
     public ResponseEntity<List<ChampionDTO>> getChampions() {
         try {
+            int currentYear = java.time.Year.now().getValue();
+            SeasonInfo currentSeasonInfo = seasonInfoRepository.findByYear(currentYear);
+            
             List<ChampionDTO> champions = championRepository.findAll().stream()
+                    .filter(champion -> {
+                        // If it's current year, check availability
+                        if (champion.getYear().equals(currentYear)) {
+                            return currentSeasonInfo != null && currentSeasonInfo.isChampionAvailableForCurrentYear();
+                        }
+                        // For past years, always include
+                        return true;
+                    })
                     .map(ChampionDTO::fromEntity)
                     .collect(Collectors.toList());
+            
             return ResponseEntity.ok(champions);
         } catch (Exception e) {
             log.error("Error fetching champions", e);
@@ -104,6 +128,14 @@ public class ChampionService {
 
     public ResponseEntity<ChampionDTO> getChampion(int year) {
         try {
+            // For current year, check availability first
+            if (year == java.time.Year.now().getValue()) {
+                SeasonInfo seasonInfo = seasonInfoRepository.findByYear(year);
+                if (seasonInfo == null || !seasonInfo.isChampionAvailableForCurrentYear()) {
+                    return ResponseEntity.notFound().build();
+                }
+            }
+
             Optional<Champion> existingChampion = championRepository.findByYear(year);
             if (existingChampion.isPresent()) {
                 return ResponseEntity.ok(ChampionDTO.fromEntity(existingChampion.get()));
@@ -111,11 +143,7 @@ public class ChampionService {
 
             ResponseEntity<Champion> apiResponse = ergastApiService.fetchWorldChampion(year);
             if (apiResponse.getStatusCode() != HttpStatus.OK || apiResponse.getBody() == null) {
-                throw new ServiceException(
-                        "Failed to fetch champion data from external API",
-                        "CHAMPION_API_ERROR",
-                        HttpStatus.SERVICE_UNAVAILABLE.value()
-                );
+                return ResponseEntity.notFound().build();
             }
 
             Champion champion = apiResponse.getBody();

@@ -1,10 +1,10 @@
 package com.f1.app.config;
 
-import com.f1.app.dto.RaceDTO;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -20,10 +20,12 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.f1.app.dto.ChampionDTO;
+import com.f1.app.dto.RaceDTO;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 @EnableCaching
 @Configuration
@@ -39,6 +41,8 @@ public class CacheConfig {
 
     @Value("${spring.data.redis.username:default}")
     private String redisUsername;
+
+    private static final Duration DEFAULT_TTL = Duration.ofHours(1);
 
     @Bean
     @Primary
@@ -64,7 +68,6 @@ public class CacheConfig {
     public ObjectMapper redisObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
-
         return mapper;
     }
 
@@ -72,15 +75,23 @@ public class CacheConfig {
     public RedisCacheManager redisCacheManager(RedisConnectionFactory factory, ObjectMapper mapper) {
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
 
-        // Cache for RaceDTO
+        // Configure races cache
         JavaType raceListType = mapper.getTypeFactory().constructCollectionType(List.class, RaceDTO.class);
         Jackson2JsonRedisSerializer<?> raceSerializer = new Jackson2JsonRedisSerializer<>(mapper, raceListType);
-
         cacheConfigurations.put("races", RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(DEFAULT_TTL)
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(raceSerializer)));
 
-        // Default fallback
-        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig();
+        // Configure champions cache
+        JavaType championListType = mapper.getTypeFactory().constructCollectionType(List.class, ChampionDTO.class);
+        Jackson2JsonRedisSerializer<?> championSerializer = new Jackson2JsonRedisSerializer<>(mapper, championListType);
+        cacheConfigurations.put("champions", RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(DEFAULT_TTL)
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(championSerializer)));
+
+        // Default configuration for other caches
+        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(DEFAULT_TTL);
 
         return RedisCacheManager.builder(factory)
                 .withInitialCacheConfigurations(cacheConfigurations)

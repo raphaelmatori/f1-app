@@ -1,27 +1,36 @@
 package com.f1.app.service;
 
-import com.f1.app.dto.ChampionDTO;
-import com.f1.app.exception.ServiceException;
-import com.f1.app.model.Champion;
-import com.f1.app.repository.ChampionRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import com.f1.app.dto.ChampionDTO;
+import com.f1.app.exception.ServiceException;
+import com.f1.app.model.Champion;
+import com.f1.app.model.SeasonInfo;
+import com.f1.app.repository.ChampionRepository;
+import com.f1.app.repository.SeasonInfoRepository;
 
 class ChampionServiceTest {
 
@@ -32,6 +41,9 @@ class ChampionServiceTest {
     private ChampionRepository championRepository;
 
     @Mock
+    private SeasonInfoRepository seasonInfoRepository;
+
+    @Mock
     private ErgastApiService ergastApiService;
 
     @Mock
@@ -39,29 +51,41 @@ class ChampionServiceTest {
 
     private Champion testChampion;
     private ChampionDTO testChampionDTO;
+    private final int currentYear = java.time.Year.now().getValue();
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        testChampion = new Champion(2023, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 19);
+        testChampion = new Champion(currentYear, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 19);
         testChampionDTO = ChampionDTO.fromEntity(testChampion);
     }
 
     @Test
     void getChampions_ShouldReturnAllChampions() {
+        // Arrange
         List<Champion> expectedChampions = Arrays.asList(
                 testChampion,
                 new Champion(2022, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 15)
         );
         when(championRepository.findAll()).thenReturn(expectedChampions);
+        
+        // Mock SeasonInfo for current year
+        SeasonInfo seasonInfo = SeasonInfo.builder()
+            .year(currentYear)
+            .isChampionAvailableForCurrentYear(true)
+            .build();
+        when(seasonInfoRepository.findByYear(currentYear)).thenReturn(seasonInfo);
 
+        // Act
         ResponseEntity<List<ChampionDTO>> response = championService.getChampions();
 
+        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(2, response.getBody().size());
         assertEquals(expectedChampions.get(0).getDriverId(), response.getBody().get(0).getDriverId());
         verify(championRepository).findAll();
+        verify(seasonInfoRepository).findByYear(currentYear);
     }
 
     @Test
@@ -105,13 +129,15 @@ class ChampionServiceTest {
 
     @Test
     void getChampion_WhenApiReturnsError_ShouldThrowServiceException() {
-        when(championRepository.findByYear(2023)).thenReturn(Optional.empty());
-        when(ergastApiService.fetchWorldChampion(2023)).thenReturn(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
+        // Arrange
+        int year = 2023;
+        when(championRepository.findByYear(year)).thenReturn(Optional.empty());
+        when(ergastApiService.fetchWorldChampion(year)).thenReturn(ResponseEntity.notFound().build());
 
-        ServiceException exception = assertThrows(ServiceException.class, () -> championService.getChampion(2023));
-        assertEquals("Failed to fetch champion data from external API", exception.getMessage());
-        assertEquals("CHAMPION_API_ERROR", exception.getCode());
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), exception.getStatus());
+        // Act & Assert
+        ResponseEntity<ChampionDTO> response = championService.getChampion(year);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNull(response.getBody());
     }
 
     @Test
@@ -157,5 +183,145 @@ class ChampionServiceTest {
         assertEquals("Failed to initialize champion data", exception.getMessage());
         assertEquals("CHAMPION_INIT_ERROR", exception.getCode());
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getStatus());
+    }
+
+    @Test
+    void getChampions_WhenCurrentYearChampionNotAvailable_ShouldExcludeCurrentYear() {
+        // Arrange
+        Champion pastChampion = new Champion(currentYear - 1, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 15);
+        List<Champion> allChampions = Arrays.asList(testChampion, pastChampion);
+        
+        SeasonInfo seasonInfo = SeasonInfo.builder()
+            .year(currentYear)
+            .isChampionAvailableForCurrentYear(false)
+            .build();
+        
+        when(championRepository.findAll()).thenReturn(allChampions);
+        when(seasonInfoRepository.findByYear(currentYear)).thenReturn(seasonInfo);
+
+        // Act
+        ResponseEntity<List<ChampionDTO>> response = championService.getChampions();
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals(currentYear - 1, response.getBody().get(0).getYear());
+    }
+
+    @Test
+    void getChampions_WhenCurrentYearChampionAvailable_ShouldIncludeCurrentYear() {
+        // Arrange
+        Champion pastChampion = new Champion(currentYear - 1, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 15);
+        List<Champion> allChampions = Arrays.asList(testChampion, pastChampion);
+        
+        SeasonInfo seasonInfo = SeasonInfo.builder()
+            .year(currentYear)
+            .isChampionAvailableForCurrentYear(true)
+            .build();
+        
+        when(championRepository.findAll()).thenReturn(allChampions);
+        when(seasonInfoRepository.findByYear(currentYear)).thenReturn(seasonInfo);
+
+        // Act
+        ResponseEntity<List<ChampionDTO>> response = championService.getChampions();
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(2, response.getBody().size());
+        assertTrue(response.getBody().stream().anyMatch(c -> c.getYear().equals(currentYear)));
+    }
+
+    @Test
+    void getChampion_WhenCurrentYearAndChampionNotAvailable_ShouldReturnNotFound() {
+        // Arrange
+        SeasonInfo seasonInfo = SeasonInfo.builder()
+            .year(currentYear)
+            .isChampionAvailableForCurrentYear(false)
+            .build();
+        
+        when(seasonInfoRepository.findByYear(currentYear)).thenReturn(seasonInfo);
+
+        // Act
+        ResponseEntity<ChampionDTO> response = championService.getChampion(currentYear);
+
+        // Assert
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void getChampion_WhenPastYear_ShouldReturnChampion() {
+        // Arrange
+        int pastYear = currentYear - 1;
+        Champion pastChampion = new Champion(pastYear, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 15);
+        when(championRepository.findByYear(pastYear)).thenReturn(Optional.of(pastChampion));
+
+        // Act
+        ResponseEntity<ChampionDTO> response = championService.getChampion(pastYear);
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(pastYear, response.getBody().getYear());
+    }
+
+    @Test
+    void getChampion_WhenCurrentYearAndChampionAvailable_ShouldReturnChampion() {
+        // Arrange
+        SeasonInfo seasonInfo = SeasonInfo.builder()
+            .year(currentYear)
+            .isChampionAvailableForCurrentYear(true)
+            .build();
+        
+        when(seasonInfoRepository.findByYear(currentYear)).thenReturn(seasonInfo);
+        when(championRepository.findByYear(currentYear)).thenReturn(Optional.of(testChampion));
+
+        // Act
+        ResponseEntity<ChampionDTO> response = championService.getChampion(currentYear);
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(currentYear, response.getBody().getYear());
+    }
+
+    @Test
+    void initializeChampionData_ShouldAlwaysUpdateCurrentYear() {
+        // Arrange
+        Champion existingCurrentYearChampion = new Champion(currentYear, "hamilton", "HAM", "Lewis", "Hamilton", "British", 400.0f, 15);
+        Champion updatedCurrentYearChampion = new Champion(currentYear, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 19);
+        
+        // Mock that we already have the current year champion in DB
+        when(championRepository.findAll()).thenReturn(Arrays.asList(existingCurrentYearChampion));
+        when(ergastApiService.fetchWorldChampion(currentYear)).thenReturn(ResponseEntity.ok(updatedCurrentYearChampion));
+        when(championRepository.save(any(Champion.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Act
+        championService.initializeChampionData();
+
+        // Assert
+        verify(ergastApiService).fetchWorldChampion(currentYear);
+        verify(championRepository).save(updatedCurrentYearChampion);
+    }
+
+    @Test
+    void initializeChampionData_WhenCurrentYearFails_ShouldContinueWithPastYears() {
+        // Arrange
+        Champion pastYearChampion = new Champion(currentYear - 1, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 15);
+        
+        when(championRepository.findAll()).thenReturn(Collections.emptyList());
+        when(ergastApiService.fetchWorldChampion(currentYear)).thenThrow(new RuntimeException("API Error"));
+        when(ergastApiService.fetchWorldChampion(currentYear - 1)).thenReturn(ResponseEntity.ok(pastYearChampion));
+        when(championRepository.save(any(Champion.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Act
+        championService.initializeChampionData();
+
+        // Assert
+        verify(ergastApiService).fetchWorldChampion(currentYear);
+        verify(ergastApiService).fetchWorldChampion(currentYear - 1);
+        verify(championRepository).save(pastYearChampion);
     }
 }

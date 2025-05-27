@@ -50,16 +50,6 @@ public class Race implements Serializable {
         result.setRace(this);
     }
 
-    public void setResults(List<RaceResult> results) {
-        if (this.results == null) {
-            this.results = new ArrayList<>();
-        }
-        this.results.clear();
-        if (results != null) {
-            results.forEach(this::addResult);
-        }
-    }
-
     @PrePersist
     @PreUpdate
     private void initializeResults() {

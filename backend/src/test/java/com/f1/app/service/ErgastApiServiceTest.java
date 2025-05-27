@@ -1,17 +1,30 @@
 package com.f1.app.service;
 
-import com.f1.app.dto.ErgastChampionResponse;
-import com.f1.app.dto.ErgastRaceResponse;
-import com.f1.app.dto.RaceDTO;
-import com.f1.app.model.Champion;
-import com.f1.app.model.Race;
-import com.f1.app.model.RaceResult;
-import com.f1.app.repository.ChampionRepository;
-import com.f1.app.repository.RaceRepository;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
 import org.springframework.cache.Cache;
 import org.springframework.context.ApplicationContext;
@@ -20,15 +33,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import com.f1.app.dto.ErgastChampionResponse;
+import com.f1.app.dto.ErgastRaceResponse;
+import com.f1.app.dto.RaceDTO;
+import com.f1.app.model.Champion;
+import com.f1.app.model.Race;
+import com.f1.app.model.RaceResult;
+import com.f1.app.repository.ChampionRepository;
+import com.f1.app.repository.RaceRepository;
 
 class ErgastApiServiceTest {
     private final int TEST_YEAR = 2023;
@@ -601,5 +613,76 @@ class ErgastApiServiceTest {
         assertEquals("mercedes", result.getConstructor().getConstructorId());
         assertNotNull(result.getTime());
         assertEquals("5400000", result.getTime().getMillis());
+    }
+
+    @Test
+    void fetchLastRaceOfSeason_WhenValidResponse_ReturnsLastRace() {
+        // Arrange
+        ErgastRaceResponse.RaceData firstRace = ErgastRaceResponse.RaceData.builder()
+                .season("2023")
+                .round("1")
+                .raceName("First Race")
+                .date("2023-03-05")
+                .build();
+
+        ErgastRaceResponse.RaceData lastRace = ErgastRaceResponse.RaceData.builder()
+                .season("2023")
+                .round("22")
+                .raceName("Last Race")
+                .date("2023-11-26")
+                .build();
+
+        ErgastRaceResponse response = ErgastRaceResponse.builder()
+                .mrData(ErgastRaceResponse.MRData.builder()
+                        .raceTable(ErgastRaceResponse.RaceTable.builder()
+                                .races(List.of(firstRace, lastRace))
+                                .build())
+                        .build())
+                .build();
+
+        when(restTemplate.getForEntity(anyString(), eq(ErgastRaceResponse.class)))
+                .thenReturn(ResponseEntity.ok(response));
+
+        // Act
+        Optional<Race> result = ergastApiService.fetchLastRaceOfSeason(TEST_YEAR);
+
+        // Assert
+        assertTrue(result.isPresent());
+        assertEquals(22, result.get().getRound());
+        assertEquals("Last Race", result.get().getRaceName());
+    }
+
+    @Test
+    void fetchLastRaceOfSeason_WhenEmptyResponse_ReturnsEmpty() {
+        // Arrange
+        ErgastRaceResponse response = ErgastRaceResponse.builder()
+                .mrData(ErgastRaceResponse.MRData.builder()
+                        .raceTable(ErgastRaceResponse.RaceTable.builder()
+                                .races(new ArrayList<>())
+                                .build())
+                        .build())
+                .build();
+
+        when(restTemplate.getForEntity(anyString(), eq(ErgastRaceResponse.class)))
+                .thenReturn(ResponseEntity.ok(response));
+
+        // Act
+        Optional<Race> result = ergastApiService.fetchLastRaceOfSeason(TEST_YEAR);
+
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void fetchLastRaceOfSeason_WhenNullResponse_ReturnsEmpty() {
+        // Arrange
+        when(restTemplate.getForEntity(anyString(), eq(ErgastRaceResponse.class)))
+                .thenReturn(ResponseEntity.ok(null));
+
+        // Act
+        Optional<Race> result = ergastApiService.fetchLastRaceOfSeason(TEST_YEAR);
+
+        // Assert
+        assertTrue(result.isEmpty());
     }
 }

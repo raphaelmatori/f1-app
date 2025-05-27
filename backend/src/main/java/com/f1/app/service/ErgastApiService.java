@@ -1,15 +1,12 @@
 package com.f1.app.service;
 
-import com.f1.app.dto.ErgastChampionResponse;
-import com.f1.app.dto.ErgastRaceResponse;
-import com.f1.app.dto.RaceDTO;
-import com.f1.app.model.Champion;
-import com.f1.app.model.Race;
-import com.f1.app.model.RaceResult;
-import com.f1.app.repository.ChampionRepository;
-import com.f1.app.repository.RaceRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +17,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import com.f1.app.dto.ErgastChampionResponse;
+import com.f1.app.dto.ErgastRaceResponse;
+import com.f1.app.dto.RaceDTO;
+import com.f1.app.model.Champion;
+import com.f1.app.model.Race;
+import com.f1.app.model.RaceResult;
+import com.f1.app.repository.ChampionRepository;
+import com.f1.app.repository.RaceRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -256,5 +259,22 @@ public class ErgastApiService {
         }
 
         return race;
+    }
+
+    public Optional<Race> fetchLastRaceOfSeason(int year) {
+        String url = String.format("%s/%d.json?limit=100", baseUrl, year);
+        ResponseEntity<ErgastRaceResponse> response = restTemplate.getForEntity(url, ErgastRaceResponse.class);
+
+        if (response.getBody() == null || response.getBody().getMrData() == null 
+            || response.getBody().getMrData().getRaceTable() == null 
+            || response.getBody().getMrData().getRaceTable().getRaces() == null
+            || response.getBody().getMrData().getRaceTable().getRaces().isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<ErgastRaceResponse.RaceData> races = response.getBody().getMrData().getRaceTable().getRaces();
+        return races.stream()
+            .max(Comparator.comparingInt(race -> Integer.parseInt(race.getRound())))
+            .map(this::mapToRace);
     }
 }

@@ -6,7 +6,7 @@ import org.springframework.web.servlet.config.annotation.ContentNegotiationConfi
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-public class CompressionConfig implements WebMvcConfigurer {
+public class ContentTypeConfig implements WebMvcConfigurer {
 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
