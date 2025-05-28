@@ -1,45 +1,113 @@
 # F1 World Champions Application
 
-This application displays Formula 1 World Champions and provides detailed information about races and winners from 1950 onwards.
+A modern web application that displays Formula 1 World Champions and provides detailed information about races and winners from 1950 onwards. The application features real-time data updates, caching mechanisms, and a responsive user interface.
 
-## Project Structure
+## System Architecture
 
-The project is divided into two main parts:
+### Overview
+The application follows a microservices architecture with the following components:
+
+![Hight Level Architecture](docs/images/high-level-architecture.png)
+
+### Frontend (Angular)
+- Angular 19.2
+- Standalone Components Architecture
+- SCSS for styling
+- Responsive design with modern UI/UX practices
+- Service abstraction with interfaces
+- Lazy-loaded modules
+- HTTP interceptors for API communication
 
 ### Backend (Spring Boot)
 - Java 17
 - Spring Boot 3.4.5
-- MySQL 8.0 (main profile)
-- H2 in-memory database (test profile)
-- JPA/Hibernate
-- Redis (for caching)
+- Spring Data JPA/Hibernate
+- Spring Cache with Redis
 - OpenAPI/Swagger documentation
-- Robust error handling with global exception handler
-- Test coverage enforced with Jacoco
+- Global exception handling
+- Scheduled tasks for data updates
+- Health monitoring with Spring Actuator
 
-### Frontend (Angular)
-- Angular 19.2
-- SCSS for styling
-- Responsive design
-- Modern UI/UX practices
+### Data Storage
+- MySQL 8.0 for persistent storage
+- Redis for caching (race results and champions data)
+- Two-layer caching strategy (Redis + Caffeine)
+
+### Integration
+- REST API communication between frontend and backend
+- CORS configuration for security
+- Ergast F1 API integration with retry mechanism
+- Health checks for all services
+
+## API Contract
+
+### Champions API
+```
+GET /api/v1/champions
+Response: List<ChampionDTO>
+{
+  "year": number,
+  "driverId": string,
+  "givenName": string,
+  "familyName": string,
+  "nationality": string
+}
+```
+
+### Races API
+```
+GET /api/v1/races/{year}
+Response: List<RaceDTO>
+{
+  "season": number,
+  "round": number,
+  "raceName": string,
+  "date": string,
+  "circuit": {
+    "circuitName": string,
+    "location": {
+      "country": string
+    }
+  },
+  "results": [{
+    "driver": {
+      "driverId": string,
+      "givenName": string,
+      "familyName": string
+    },
+    "constructor": {
+      "constructorId": string,
+      "name": string
+    }
+  }]
+}
+```
 
 ## Prerequisites
 
-Before running the application, make sure you have the following installed:
+- Java 17 or higher
+- Node.js 18 or higher
+- Docker and Docker Compose
+- Angular CLI 19.2.12 (for local development)
 
-1. Java 17 or higher
-2. Node.js 18 or higher
-3. MySQL 8.0
-4. Redis
-5. Angular CLI 19.2.12
+## Development Setup
 
-## Setup Instructions
+The easiest way to run the application in development mode is using Docker Compose:
 
-### Database Setup
-1. Create a MySQL database named `f1_champions`
-2. Update database credentials in `backend/src/main/resources/application.yml` if needed
+```bash
+docker compose -p f1-champions-backend -f docker-compose.dev.yml up --build
+```
 
-### Backend Setup
+This will start:
+- Backend (http://localhost:8080)
+- Frontend (http://localhost:4000)
+- MySQL database
+- Redis cache
+- Adminer (http://localhost:8081)
+
+### Manual Development Setup
+
+#### Backend Setup
 1. Navigate to the backend directory:
    ```bash
    cd backend
@@ -52,20 +120,8 @@ Before running the application, make sure you have the following installed:
    ```bash
    ./gradlew bootRun
    ```
-The backend will start on http://localhost:8080
 
-#### Running Tests
-- The backend uses a test profile with H2 and Redis (localhost:6379).
-- To run all tests and check coverage:
-  ```bash
-  ./gradlew test
-  ```
-- Jacoco HTML coverage report will be generated at:
-  ```
-  backend/build/reports/jacoco/test/html/index.html
-  ```
-
-### Frontend Setup
+#### Frontend Setup
 1. Navigate to the frontend directory:
    ```bash
    cd frontend
@@ -78,7 +134,81 @@ The backend will start on http://localhost:8080
    ```bash
    ng serve
    ```
-The frontend will be available at http://localhost:4200
+
+## Production Deployment
+
+### Building and Publishing Backend Docker Image
+
+To build and publish a new production backend image:
+
+```bash
+# Navigate to backend directory
+cd backend/
+
+# Build the application
+./gradlew build
+
+# Build the Docker image
+docker build -t f1-champions-backend:prod .
+
+# Tag the image for Docker Hub
+docker tag f1-champions-backend:prod raphaelmatori/f1-champions-backend:prod
+
+# Push to Docker Hub
+docker push raphaelmatori/f1-champions-backend:prod
+```
+
+### Running the Production Backend
+
+The backend requires MySQL and Redis. Make sure both services are running and accessible. Then run:
+
+```bash
+docker run -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e MYSQL_PORT=<port> \
+  -e MYSQL_HOST=<host> \
+  -e MYSQL_USER=<user> \
+  -e MYSQL_PASSWORD=<password> \
+  -e MYSQL_DATABASE=<database> \
+  -e REDIS_HOST=<host> \
+  -e REDIS_PORT=<port> \
+  -e REDIS_PASSWORD=<password> \
+  raphaelmatori/f1-champions-backend:prod
+```
+
+Replace the placeholders with your actual configuration values.
+
+## Environment Variables
+
+### Backend
+- SPRING_PROFILES_ACTIVE: Application profile (dev/prod)
+- MYSQL_HOST: MySQL server hostname
+- MYSQL_PORT: MySQL server port
+- MYSQL_DATABASE: Database name
+- MYSQL_USER: Database username
+- MYSQL_PASSWORD: Database password
+- REDIS_HOST: Redis server hostname
+- REDIS_PORT: Redis server port
+- REDIS_PASSWORD: Redis password (optional)
+
+## Testing
+
+### Backend Tests
+Run the backend tests with:
+```bash
+cd backend
+./gradlew test
+```
+
+The test report will be generated at:
+\`backend/build/reports/jacoco/test/html/index.html\`
+
+### Frontend Tests
+Run the frontend tests with:
+```bash
+cd frontend
+npm test
+```
 
 ## API Documentation
 
@@ -86,35 +216,14 @@ Once the backend is running, you can access the API documentation at:
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
 
-## Features
+## Health Monitoring
 
-- [x] Project Setup
-- [x] Backend API Development (Spring Boot, REST, error handling)
-- [x] Database Schema Design (JPA/Hibernate, MySQL, H2 for tests)
-- [x] Redis Caching Integration
-- [x] Integration with Ergast API
-- [x] Unit Tests and Coverage Enforcement (≥ 70% for critical logic)
-- [x] OpenAPI/Swagger Documentation
-- [x] Graceful error and loading states (backend)
-- [x] Race winner data persisted and served from backend after first fetch
-- [x] Season list: Display each season's World Champion (2005 to present)
-- [x] Race winners: Clicking a season reveals all grand‑prix winners for that year
-- [x] Highlight champion in race list
-- [x] Frontend Components (Angular SPA: season list, race list, highlight champion, error/loading states)
-- [x] End-to-End Tests (frontend and backend integration)
-- [x] CI/CD pipeline (GitHub Actions or similar: install → lint → test → build, reject on test failure)
-- [x] Dockerization: Multi-stage Dockerfiles, single docker-compose.yml for backend, DB, (optionally frontend)
-- [ ] Healthchecks & environment variables in Docker
-- [ ] Documentation: High-level architecture, API contract/schema, screenshots/diagrams
-- [ ] Deployment Instructions (docker compose up, pipeline triggers)
-- [x] Containerized admin tool (e.g., pgAdmin, optional)
-- [ ] Security: Dependency scan (CodeQL/Snyk/Trivy), reject on scan failure
-- [x] Automatic deploy to free tier platform (Render, Railway, Fly.io, etc.)
-- [x] Docker image pushed to public registry (optional)
-- [ ] Async job to refresh seasons weekly after every race (optional, nice to have)
-- [ ] SSR/SSG (Next.js/Nuxt)
-- [x] Lighthouse score ≥ 90 (optional, nice to have)
-- [ ] Seed script for DB (optional)
+The application includes comprehensive health checks for all services:
+
+- Backend Health: http://localhost:8080/actuator/health
+- MySQL Health: Monitored via backend health checks
+- Redis Health: Monitored via backend health checks
+- Frontend Health: Basic HTTP check on port 4000
 
 ## Contributing
 
