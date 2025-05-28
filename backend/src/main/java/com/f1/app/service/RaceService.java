@@ -1,20 +1,21 @@
 package com.f1.app.service;
 
-import com.f1.app.dto.RaceDTO;
-import com.f1.app.model.Race;
-import com.f1.app.repository.RaceRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.stereotype.Service;
+
+import com.f1.app.dto.RaceDTO;
+import com.f1.app.model.Race;
+import com.f1.app.repository.RaceRepository;
 
 @Service
 public class RaceService {
@@ -25,17 +26,19 @@ public class RaceService {
     private final RaceRepository raceRepository;
     private final RedisCacheManager redisCacheManager;
     private final ErgastApiService ergastApiService;
+    private final CacheService cacheService;
 
-    @Autowired
     public RaceService(
             @Value("${api.ergast.baseUrl}") String baseUrl,
             RaceRepository raceRepository,
             RedisCacheManager redisCacheManager,
-            ErgastApiService ergastApiService) {
+            ErgastApiService ergastApiService,
+            CacheService cacheService) {
         this.baseUrl = baseUrl;
         this.raceRepository = raceRepository;
         this.redisCacheManager = redisCacheManager;
         this.ergastApiService = ergastApiService;
+        this.cacheService = cacheService;
     }
 
     @Cacheable(value = "races", key = "#year")
@@ -113,5 +116,22 @@ public class RaceService {
             log.error("Failed to cache races for year {}: {}", year, e.getMessage());
             // Continue without caching
         }
+    }
+
+    @CacheEvict(value = "races", key = "#year")
+    public void evictRaceCache(Integer year) {
+        log.info("Evicting race cache for year: {}", year);
+        cacheService.evictRaceCache(year);
+    }
+
+    @CacheEvict(value = "races", allEntries = true)
+    public void evictAllRaceCache() {
+        log.info("Evicting all race caches");
+        // Also evict from Redis cache explicitly
+        Optional.ofNullable(redisCacheManager.getCache(CACHE_NAME))
+                .ifPresent(cache -> {
+                    cache.clear();
+                    log.debug("Cleared all Redis caches for races");
+                });
     }
 } 

@@ -1,0 +1,93 @@
+@startuml Scheduled Data Update Flow
+
+skinparam BoxPadding 10
+skinparam ParticipantPadding 20
+
+title F1 Data Scheduled Update Flow
+
+participant "Scheduler\n(ScheduledUpdateService)" as Scheduler
+participant "Champion Service" as ChampionService
+participant "Race Service" as RaceService
+participant "Ergast API Service" as ErgastService
+participant "Season Info Service" as SeasonService
+participant "Caffeine Cache\n(Local)" as LocalCache
+participant "Redis Cache\n(Distributed)" as Redis
+participant "MySQL Database" as DB
+participant "Ergast F1 API" as ExternalAPI
+
+note over Scheduler: Runs every Monday at midnight
+
+activate Scheduler
+
+Scheduler -> RaceService: evictRaceCache(currentYear)
+activate RaceService
+
+RaceService -> LocalCache: Evict current year races
+LocalCache --> RaceService: Confirmation
+
+RaceService -> Redis: Evict current year races
+Redis --> RaceService: Confirmation
+
+RaceService --> Scheduler: Cache evicted
+deactivate RaceService
+
+Scheduler -> ChampionService: evictCurrentYearCache()
+activate ChampionService
+
+ChampionService -> LocalCache: Evict current year champion
+LocalCache --> ChampionService: Confirmation
+
+ChampionService -> Redis: Evict current year champion
+Redis --> ChampionService: Confirmation
+
+ChampionService --> Scheduler: Cache evicted
+deactivate ChampionService
+
+Scheduler -> ChampionService: initializeChampionData()
+activate ChampionService
+
+ChampionService -> ErgastService: Fetch latest champions
+activate ErgastService
+
+ErgastService -> ExternalAPI: Request champions data
+activate ExternalAPI
+ExternalAPI --> ErgastService: Champions data
+deactivate ExternalAPI
+
+ErgastService -> DB: Save updated champions
+DB --> ErgastService: Confirmation
+
+ErgastService --> ChampionService: Update complete
+deactivate ErgastService
+
+note right of ChampionService
+  All-champions cache is only evicted 
+  if a new champion is saved
+end note
+
+ChampionService --> Scheduler: Champions updated
+deactivate ChampionService
+
+Scheduler -> ErgastService: fetchLastRaceOfSeason(currentYear)
+activate ErgastService
+
+ErgastService -> ExternalAPI: Request last race info
+activate ExternalAPI
+ExternalAPI --> ErgastService: Last race data
+deactivate ExternalAPI
+
+ErgastService --> Scheduler: Last race info
+deactivate ErgastService
+
+Scheduler -> SeasonService: Update season info
+activate SeasonService
+
+SeasonService -> DB: Save season info
+DB --> SeasonService: Confirmation
+
+SeasonService --> Scheduler: Update complete
+deactivate SeasonService
+
+deactivate Scheduler
+
+@enduml 

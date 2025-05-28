@@ -6,4 +6,18 @@
   min-width: 330px;
   flex-direction: column;
   position: relative;
+  overflow-x: hidden;
+
+  app-header {
+    flex: 0 0 auto;
+  }
+
+  router-outlet + * {
+    flex: 1 0 auto;
+    min-height: calc(100vh - 5rem - 100px); /* header height + footer height */
+  }
+
+  app-footer {
+    flex: 0 0 auto;
+  }
 }

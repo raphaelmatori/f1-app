@@ -7,7 +7,64 @@ A modern web application that displays Formula 1 World Champions and provides de
 ### Overview
 The application follows a microservices architecture with the following components:
 
-![Hight Level Architecture](docs/images/high-level-architecture.png)
+![High Level Architecture](docs/images/high-level-architecture.png)
+
+### Sequence Diagrams
+
+The application has three main flows, documented in detail with sequence diagrams:
+
+1. **World Champions Fetching Flow**
+   
+   This diagram shows how the application fetches and displays the F1 World Champions list, including caching and data persistence strategies.
+   
+   ![World Champions Flow](docs/images/fetch-champions-flow.png)
+
+2. **Race Winners Fetching Flow**
+   
+   This diagram illustrates the process of fetching and displaying race winners for a specific season, including pagination and champion highlighting.
+   
+   ![Race Winners Flow](docs/images/fetch-races-flow.png)
+
+3. **Scheduled Data Update Flow**
+   
+   This diagram shows the automated process of keeping the data up-to-date through scheduled tasks.
+   
+   ![Scheduled Update Flow](docs/images/scheduled-update-flow.png)
+
+The source files for these diagrams are available in the `docs` directory:
+- `docs/fetch-champions-flow.puml`
+- `docs/fetch-races-flow.puml`
+- `docs/scheduled-update-flow.puml`
+
+To generate new diagrams or update existing ones:
+
+1. Install PlantUML:
+   ```bash
+   # macOS
+   brew install plantuml
+
+   # Ubuntu/Debian
+   sudo apt-get install plantuml
+
+   # Windows
+   choco install plantuml
+   ```
+
+2. Generate PNG files from .puml files:
+   ```bash
+   # Single file
+   plantuml docs/fetch-champions-flow.puml
+
+   # All files in docs directory
+   plantuml docs/*.puml
+   ```
+
+   The generated images will be placed in the same directory as the source files. Move them to `docs/images/` if needed.
+
+3. Alternative: Use online PlantUML editor
+   - Visit [PlantUML Online Editor](http://www.plantuml.com/plantuml/uml/)
+   - Copy the content of your .puml file
+   - Download the generated image
 
 ### Frontend (Angular)
 - Angular 19.2
@@ -189,7 +246,7 @@ Replace the placeholders with your actual configuration values.
 - MYSQL_PASSWORD: Database password
 - REDIS_HOST: Redis server hostname
 - REDIS_PORT: Redis server port
-- REDIS_PASSWORD: Redis password (optional)
+- REDIS_PASSWORD: Redis password
 
 ## Testing
 

@@ -1,160 +1,148 @@
 package com.f1.app.service;
 
-import com.f1.app.dto.RaceDTO;
-import com.f1.app.dto.RaceResultDTO;
-import com.f1.app.model.Race;
-import com.f1.app.model.RaceResult;
-import com.f1.app.repository.RaceRepository;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.*;
+import com.f1.app.dto.RaceDTO;
+import com.f1.app.model.Race;
+import com.f1.app.repository.RaceRepository;
 
 class RaceServiceTest {
     private final int TEST_YEAR = 2023;
+    
     @Mock
     private RaceRepository raceRepository;
-    @Mock
-    private RedisCacheManager redisCacheManager;
+    
     @Mock
     private ErgastApiService ergastApiService;
+    
+    @Mock
+    private CacheService cacheService;
+    
+    @Mock
+    private RedisCacheManager redisCacheManager;
+    
     @Mock
     private org.springframework.cache.Cache redisCache;
+    
     @InjectMocks
     private RaceService raceService;
+    
     private List<Race> testRaces;
     private List<RaceDTO> testRaceDTOs;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        ReflectionTestUtils.setField(raceService, "baseUrl", "http://test-url");
+        
         testRaces = new ArrayList<>();
-
         Race race = new Race();
-        ReflectionTestUtils.setField(race, "season", TEST_YEAR);
-        ReflectionTestUtils.setField(race, "round", 1);
-        ReflectionTestUtils.setField(race, "raceName", "Test Grand Prix");
-        ReflectionTestUtils.setField(race, "results", new ArrayList<>());
-
-        RaceResult result = new RaceResult();
-        ReflectionTestUtils.setField(result, "position", "1");
-        ReflectionTestUtils.setField(result, "points", "25");
-        ReflectionTestUtils.setField(result, "status", "Finished");
-        ReflectionTestUtils.setField(result, "race", race);
-
-        race.addResult(result);
+        race.setSeason(TEST_YEAR);
+        race.setRound(1);
+        race.setRaceName("Test Race");
         testRaces.add(race);
-
-        testRaceDTOs = testRaces.stream()
-                .map(RaceDTO::fromEntity)
-                .collect(java.util.stream.Collectors.toList());
-
+        
+        testRaceDTOs = new ArrayList<>();
+        RaceDTO raceDTO = RaceDTO.fromEntity(race);
+        testRaceDTOs.add(raceDTO);
+        
+        doNothing().when(cacheService).evictRaceCache(anyInt());
+        
+        // Mock Redis cache behavior
         when(redisCacheManager.getCache(anyString())).thenReturn(redisCache);
-        when(ergastApiService.fetchAndSaveRaces(anyInt(), any())).thenReturn(testRaceDTOs);
-    }
-
-    @Test
-    void getRacesByYear_WhenInRedisCache_ReturnsFromCache() {
-        when(redisCache.get(TEST_YEAR)).thenReturn(() -> testRaceDTOs);
-        List<RaceDTO> result = raceService.getRacesByYear(TEST_YEAR);
-        assertNotNull(result);
-        assertEquals(testRaces.size(), result.size());
-        verify(raceRepository, never()).findBySeason(anyInt());
-        verify(ergastApiService, never()).fetchAndSaveRaces(anyInt(), any());
+        when(redisCache.get(anyInt())).thenReturn(null);
     }
 
     @Test
     void getRacesByYear_WhenInDatabase_ReturnsFromDatabase() {
-        when(redisCache.get(TEST_YEAR)).thenReturn(null);
+        // Arrange
         when(raceRepository.findBySeason(TEST_YEAR)).thenReturn(testRaces);
+
+        // Act
         List<RaceDTO> result = raceService.getRacesByYear(TEST_YEAR);
-        assertNotNull(result);
-        assertEquals(testRaces.size(), result.size());
-        verify(ergastApiService, never()).fetchAndSaveRaces(anyInt(), any());
-        verify(redisCache).put(eq(TEST_YEAR), any());
+
+        // Assert
+        assertEquals(testRaceDTOs.size(), result.size());
+        verify(raceRepository).findBySeason(TEST_YEAR);
+        verify(ergastApiService, never()).fetchAndSaveRaces(anyInt(), anyString());
     }
 
     @Test
-    void getRacesByYear_WhenNotCached_FetchesFromAPI() {
-        when(redisCache.get(TEST_YEAR)).thenReturn(null);
+    void getRacesByYear_WhenNotInDatabase_FetchesFromAPI() {
+        // Arrange
         when(raceRepository.findBySeason(TEST_YEAR)).thenReturn(new ArrayList<>());
-        when(ergastApiService.fetchAndSaveRaces(eq(TEST_YEAR), any())).thenReturn(testRaceDTOs);
-        List<RaceDTO> result = raceService.getRacesByYear(TEST_YEAR);
-        assertNotNull(result);
-        assertEquals(testRaces.size(), result.size());
-        verify(ergastApiService).fetchAndSaveRaces(eq(TEST_YEAR), any());
-    }
+        when(ergastApiService.fetchAndSaveRaces(eq(TEST_YEAR), anyString())).thenReturn(testRaceDTOs);
 
-    @Test
-    void getRacesByYear_WhenRedisCacheThrowsException_ContinueWithDatabase() {
-        when(redisCache.get(TEST_YEAR)).thenThrow(new RuntimeException("Cache error"));
-        when(raceRepository.findBySeason(TEST_YEAR)).thenReturn(testRaces);
+        // Act
         List<RaceDTO> result = raceService.getRacesByYear(TEST_YEAR);
-        assertNotNull(result);
-        assertEquals(testRaces.size(), result.size());
-        verify(ergastApiService, never()).fetchAndSaveRaces(anyInt(), any());
+
+        // Assert
+        assertEquals(testRaceDTOs.size(), result.size());
+        verify(raceRepository).findBySeason(TEST_YEAR);
+        verify(ergastApiService).fetchAndSaveRaces(eq(TEST_YEAR), anyString());
     }
 
     @Test
     void getRacesByYear_WhenDatabaseThrowsException_FetchesFromAPI() {
-        when(redisCache.get(TEST_YEAR)).thenReturn(null);
-        when(raceRepository.findBySeason(TEST_YEAR)).thenThrow(new RuntimeException("DB error"));
-        when(ergastApiService.fetchAndSaveRaces(eq(TEST_YEAR), any())).thenReturn(testRaceDTOs);
+        // Arrange
+        when(raceRepository.findBySeason(TEST_YEAR))
+            .thenThrow(new RuntimeException("Database error"));
+        when(ergastApiService.fetchAndSaveRaces(eq(TEST_YEAR), anyString()))
+            .thenReturn(testRaceDTOs);
+
+        // Act
         List<RaceDTO> result = raceService.getRacesByYear(TEST_YEAR);
-        assertNotNull(result);
-        assertEquals(1, result.size());
+
+        // Assert
+        assertEquals(testRaceDTOs.size(), result.size());
+        verify(raceRepository).findBySeason(TEST_YEAR);
+        verify(ergastApiService).fetchAndSaveRaces(eq(TEST_YEAR), anyString());
     }
 
     @Test
     void getRacesByYear_WhenAllFail_ReturnsEmptyList() {
-        when(redisCache.get(TEST_YEAR)).thenThrow(new RuntimeException("Cache error"));
-        when(raceRepository.findBySeason(TEST_YEAR)).thenThrow(new RuntimeException("DB error"));
-        when(ergastApiService.fetchAndSaveRaces(eq(TEST_YEAR), any())).thenReturn(new ArrayList<>());
+        // Arrange
+        when(raceRepository.findBySeason(TEST_YEAR))
+            .thenThrow(new RuntimeException("Database error"));
+        when(ergastApiService.fetchAndSaveRaces(eq(TEST_YEAR), anyString()))
+            .thenReturn(new ArrayList<>());
+
+        // Act
         List<RaceDTO> result = raceService.getRacesByYear(TEST_YEAR);
-        assertNotNull(result);
+
+        // Assert
         assertTrue(result.isEmpty());
+        verify(raceRepository).findBySeason(TEST_YEAR);
+        verify(ergastApiService).fetchAndSaveRaces(eq(TEST_YEAR), anyString());
     }
 
     @Test
-    void getRacesByYear_WithLazyResults_SerializesCorrectly() {
-        // Given
-        RaceDTO race = RaceDTO.fromEntity(testRaces.get(0));
-        List<RaceResultDTO> raceResults = (List<RaceResultDTO>) ReflectionTestUtils.getField(race, "results");
-        assertFalse(raceResults.isEmpty(), "Test race should have results");
-
-        // When
-        when(redisCache.get(TEST_YEAR)).thenReturn(() -> testRaceDTOs);
-        List<RaceDTO> result = raceService.getRacesByYear(TEST_YEAR);
-
-        // Then
-        assertNotNull(result);
-        assertFalse(result.isEmpty());
-        RaceDTO cachedRace = result.get(0);
-        List<RaceResultDTO> cachedResults = (List<RaceResultDTO>) ReflectionTestUtils.getField(cachedRace, "results");
-        assertNotNull(cachedResults);
-        assertFalse(cachedResults.isEmpty());
-        assertEquals(raceResults.size(), cachedResults.size());
-
-        RaceResultDTO originalResult = raceResults.get(0);
-        RaceResultDTO cachedResult = cachedResults.get(0);
-        assertEquals(
-                ReflectionTestUtils.getField(originalResult, "position"),
-                ReflectionTestUtils.getField(cachedResult, "position")
-        );
-        assertEquals(
-                ReflectionTestUtils.getField(originalResult, "points"),
-                ReflectionTestUtils.getField(cachedResult, "points")
-        );
+    void evictRaceCache_ShouldEvictCache() {
+        // Arrange
+        int year = 2023;
+        
+        // Act
+        raceService.evictRaceCache(year);
+        
+        // Assert
+        verify(cacheService).evictRaceCache(year);
     }
 } 

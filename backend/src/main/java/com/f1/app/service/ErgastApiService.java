@@ -5,10 +5,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -20,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 import com.f1.app.dto.ErgastChampionResponse;
 import com.f1.app.dto.ErgastRaceResponse;
 import com.f1.app.dto.RaceDTO;
+import com.f1.app.exception.ServiceException;
 import com.f1.app.model.Champion;
 import com.f1.app.model.Race;
 import com.f1.app.model.RaceResult;
@@ -38,7 +40,8 @@ public class ErgastApiService {
     private final RestTemplate restTemplate;
     private final ChampionRepository championRepository;
     private final RaceRepository raceRepository;
-    private final RedisCacheManager redisCacheManager;
+    private final CacheService cacheService;
+    
     @Value("${api.ergast.baseUrl}")
     private String baseUrl;
 
@@ -101,12 +104,20 @@ public class ErgastApiService {
 
                 ResponseEntity<ErgastRaceResponse> response = restTemplate.getForEntity(url, ErgastRaceResponse.class);
                 if (response.getBody() == null || response.getBody().getMrData() == null) {
-                    throw new RuntimeException("Failed to fetch races");
+                    throw new ServiceException(
+                        "Failed to fetch races",
+                        "RACES_FETCH_ERROR",
+                        HttpStatus.INTERNAL_SERVER_ERROR.value()
+                    );
                 }
 
                 ErgastRaceResponse.MRData mrData = response.getBody().getMrData();
                 if (mrData.getRaceTable() == null) {
-                    throw new RuntimeException("Failed to fetch races");
+                    throw new ServiceException(
+                        "Failed to fetch races",
+                        "RACES_FETCH_ERROR",
+                        HttpStatus.INTERNAL_SERVER_ERROR.value()
+                    );
                 }
 
                 total = Integer.parseInt(mrData.getTotal());
@@ -127,15 +138,13 @@ public class ErgastApiService {
                         if (existingRace.isPresent()) {
                             Race race = existingRace.get();
                             // Add all results from new race to existing race
-                            newRace.getResults().forEach(result -> {
-                                race.addResult(result);
-                            });
+                            newRace.getResults().forEach(race::addResult);
                         } else {
                             allRaces.add(newRace);
                         }
                     }
                 }
-                offset += 100;
+                offset += 1;
             } while (offset < total);
 
             if (allRaces.isEmpty()) {
@@ -143,47 +152,50 @@ public class ErgastApiService {
                 return new ArrayList<>();
             }
 
-            // Save races in database asynchronously
-            saveRacesInDatabaseAsync(allRaces, year);
+            try {
+                // Save races in database and wait for completion
+                saveRacesInDatabaseAsync(allRaces, year).get(5, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                log.error("Error saving races to database: {}", e.getMessage());
+                throw new ServiceException(
+                    "Failed to save races to database",
+                    "RACES_SAVE_ERROR",
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    e
+                );
+            }
 
-            // Convert to DTOs and save in Redis cache asynchronously
+            // Convert to DTOs
             List<RaceDTO> raceDTOs = allRaces.stream()
                     .map(RaceDTO::fromEntity)
                     .collect(Collectors.toList());
-            saveRacesInRedisAsync(year, raceDTOs);
+
+            // Evict cache for this year before saving new data
+            cacheService.evictRaceCache(year);
 
             return raceDTOs;
         } catch (Exception e) {
             log.error("Error fetching races for year {}: {}", year, e.getMessage());
-            throw new RuntimeException("Failed to fetch races", e);
-        }
-    }
-
-    @Async
-    public CompletableFuture<Void> saveRacesInRedisAsync(Integer year, List<RaceDTO> raceDTOs) {
-        try {
-            log.info("Caching races for year {} in Redis", year);
-            Optional.ofNullable(redisCacheManager.getCache("races")).ifPresent(cache -> {
-                cache.put(year, raceDTOs);
-            });
-            return CompletableFuture.runAsync(() -> {
-                log.info("Successfully cached {} races for year {}", raceDTOs.size(), year);
-            });
-        } catch (Exception e) {
-            log.error("Failed to cache races in Redis: {}", e.getMessage());
-            return CompletableFuture.completedFuture(null);
+            if (e instanceof ServiceException) {
+                throw e;
+            }
+            throw new ServiceException(
+                "Failed to fetch races",
+                "RACES_FETCH_ERROR",
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                e
+            );
         }
     }
 
     @Async
     public CompletableFuture<Void> saveRacesInDatabaseAsync(List<Race> races, Integer year) {
-        List<Race> saved = new ArrayList<>();
-        for (Race race : races) {
-            saved.add(raceRepository.save(race));
-        }
-
         return CompletableFuture.runAsync(() -> {
-            log.info("Saved {} races for year {}", races.size(), year);
+            List<Race> saved = new ArrayList<>();
+            for (Race race : races) {
+                saved.add(raceRepository.save(race));
+            }
+            log.info("Saved {} races for year {}", saved.size(), year);
         });
     }
 

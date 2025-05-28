@@ -1,0 +1,87 @@
+@startuml Fetch Race Winners Flow
+
+skinparam BoxPadding 10
+skinparam ParticipantPadding 20
+
+title F1 Race Winners Fetching Flow
+
+actor User
+participant "Angular Frontend\n(SeasonListComponent)" as Frontend
+participant "Backend Controller\n(RaceController)" as Controller
+participant "Race Service" as Service
+participant "Caffeine Cache\n(Local)" as LocalCache
+participant "Redis Cache\n(Distributed)" as Redis
+participant "MySQL Database" as DB
+participant "Ergast F1 API" as ExternalAPI
+
+User -> Frontend: Click Season Year
+activate Frontend
+
+Frontend -> Controller: GET /api/v1/races/{year}
+activate Controller
+
+Controller -> Service: getRacesByYear(year)
+activate Service
+
+Service -> LocalCache: Check local cache
+activate LocalCache
+
+alt Local Cache Hit
+    LocalCache --> Service: Return cached races
+else Local Cache Miss
+    LocalCache --> Service: Cache miss
+    Service -> Redis: Check distributed cache
+    activate Redis
+
+    alt Redis Cache Hit
+        Redis --> Service: Return cached races
+        Service -> LocalCache: Update local cache
+        LocalCache --> Service: Confirmation
+    else Redis Cache Miss
+        Redis --> Service: Cache miss
+        Service -> DB: findBySeason(year)
+        activate DB
+        
+        alt Data in DB
+            DB --> Service: Return races
+        else Empty DB
+            DB --> Service: Empty result
+            Service -> ExternalAPI: Fetch races data
+            activate ExternalAPI
+            
+            loop For each race batch
+                ExternalAPI --> Service: Race results (paginated)
+                Service -> DB: Save race batch
+                DB --> Service: Confirmation
+            end
+            
+            deactivate ExternalAPI
+        end
+        
+        Service -> Redis: Store in distributed cache
+        Redis --> Service: Confirmation
+        Service -> LocalCache: Store in local cache
+        LocalCache --> Service: Confirmation
+        deactivate DB
+    end
+    deactivate Redis
+end
+
+deactivate LocalCache
+
+Service --> Controller: List<RaceDTO>
+deactivate Service
+
+Controller --> Frontend: JSON Response
+deactivate Controller
+
+Frontend -> Frontend: Update UI
+Frontend --> User: Display Race Winners
+
+alt Is World Champion
+    Frontend -> Frontend: Highlight Champion's Wins
+end
+
+deactivate Frontend
+
+@enduml 

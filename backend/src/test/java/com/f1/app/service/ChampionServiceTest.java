@@ -1,5 +1,6 @@
 package com.f1.app.service;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -12,15 +13,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.cache.Cache;
+import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.f1.app.dto.ChampionDTO;
 import com.f1.app.exception.ServiceException;
@@ -30,9 +36,6 @@ import com.f1.app.repository.ChampionRepository;
 import com.f1.app.repository.SeasonInfoRepository;
 
 class ChampionServiceTest {
-
-    @InjectMocks
-    private ChampionService championService;
 
     @Mock
     private ChampionRepository championRepository;
@@ -44,17 +47,36 @@ class ChampionServiceTest {
     private ErgastApiService ergastApiService;
 
     @Mock
-    private RedisTemplate<String, Object> redisTemplate;
+    private CacheService cacheService;
+
+    @Mock
+    private RedisCacheManager redisCacheManager;
+
+    @Mock
+    private Cache redisCache;
+
+    @InjectMocks
+    private ChampionService championService;
 
     private Champion testChampion;
     private ChampionDTO testChampionDTO;
-    private final int currentYear = java.time.Year.now().getValue();
+    private final Integer currentYear = LocalDate.now().getYear();
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        testChampion = new Champion(currentYear, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 19);
+        ReflectionTestUtils.setField(championService, "redisCacheManager", redisCacheManager);
+        
+        // Mock Redis cache behavior
+        when(redisCacheManager.getCache(anyString())).thenReturn(redisCache);
+        when(redisCache.get(anyInt())).thenReturn(null);
+        
+        testChampion = new Champion();
+        testChampion.setYear(currentYear);
+        testChampion.setDriverId("test_driver");
         testChampionDTO = ChampionDTO.fromEntity(testChampion);
+        
+        doNothing().when(cacheService).evictChampionCache(anyString());
     }
 
     @Test
@@ -210,41 +232,67 @@ class ChampionServiceTest {
     }
 
     @Test
-    void initializeChampionData_ShouldAlwaysUpdateCurrentYear() {
-        // Arrange
-        Champion existingCurrentYearChampion = new Champion(currentYear, "hamilton", "HAM", "Lewis", "Hamilton", "British", 400.0f, 15);
-        Champion updatedCurrentYearChampion = new Champion(currentYear, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 19);
+    void evictCurrentYearCache_ShouldEvictFromBothCaches() {
+        // Act
+        championService.evictCurrentYearCache();
         
-        // Mock that we already have the current year champion in DB
-        when(championRepository.findAll()).thenReturn(Arrays.asList(existingCurrentYearChampion));
-        when(ergastApiService.fetchWorldChampion(currentYear)).thenReturn(ResponseEntity.ok(updatedCurrentYearChampion));
-        when(championRepository.save(any(Champion.class))).thenAnswer(i -> i.getArgument(0));
+        // Assert
+        verify(cacheService).evictChampionCache("currentYear");
+    }
 
+    @Test
+    void evictAllChampionsCache_ShouldEvictFromBothCaches() {
+        // Act
+        championService.evictAllChampionsCache();
+        
+        // Assert
+        verify(cacheService).evictChampionCache("allChampions");
+    }
+
+    @Test
+    void initializeChampionData_ShouldEvictCurrentYearCacheBeforeUpdate() {
+        // Arrange
+        when(championRepository.findAll()).thenReturn(Collections.emptyList());
+        when(ergastApiService.fetchWorldChampion(anyInt())).thenReturn(ResponseEntity.ok(testChampion));
+        
         // Act
         championService.initializeChampionData();
-
+        
         // Assert
+        verify(cacheService).evictChampionCache("currentYear");
+        verify(championRepository).findAll();
         verify(ergastApiService).fetchWorldChampion(currentYear);
-        verify(championRepository).save(updatedCurrentYearChampion);
     }
 
     @Test
     void initializeChampionData_WhenCurrentYearFails_ShouldContinueWithPastYears() {
         // Arrange
-        Champion pastYearChampion = new Champion(currentYear - 1, "verstappen", "VER", "Max", "Verstappen", "Dutch", 454.0f, 15);
-        
         when(championRepository.findAll()).thenReturn(Collections.emptyList());
-        when(ergastApiService.fetchWorldChampion(currentYear)).thenThrow(new RuntimeException("API Error"));
-        when(ergastApiService.fetchWorldChampion(currentYear - 1)).thenReturn(ResponseEntity.ok(pastYearChampion));
-        when(championRepository.save(any(Champion.class))).thenAnswer(i -> i.getArgument(0));
-
+        when(ergastApiService.fetchWorldChampion(currentYear))
+            .thenThrow(new RuntimeException("API error"));
+        
         // Act
         championService.initializeChampionData();
-
+        
         // Assert
+        verify(cacheService).evictChampionCache("currentYear");
+        verify(championRepository).findAll();
         verify(ergastApiService).fetchWorldChampion(currentYear);
-        verify(ergastApiService).fetchWorldChampion(currentYear - 1);
-        verify(championRepository).save(pastYearChampion);
+    }
+
+    @Test
+    void initializeChampionData_ShouldAlwaysUpdateCurrentYear() {
+        // Arrange
+        when(championRepository.findAll()).thenReturn(Collections.emptyList());
+        when(ergastApiService.fetchWorldChampion(anyInt())).thenReturn(ResponseEntity.ok(testChampion));
+        
+        // Act
+        championService.initializeChampionData();
+        
+        // Assert
+        verify(cacheService).evictChampionCache("currentYear");
+        verify(championRepository).findAll();
+        verify(ergastApiService).fetchWorldChampion(currentYear);
     }
 
     @Test
@@ -293,5 +341,60 @@ class ChampionServiceTest {
         List<ChampionDTO> champions = response.getBody();
         assertEquals(2, champions.size());
         assertTrue(champions.stream().anyMatch(c -> c.getYear().equals(currentYear)));
+    }
+
+    @Test
+    void getChampion_WhenNewChampionSaved_ShouldEvictAllChampionsCache() {
+        // Arrange
+        Champion champion = new Champion();
+        champion.setYear(currentYear);
+        champion.setDriverId("test_driver");
+        
+        SeasonInfo seasonInfo = SeasonInfo.builder()
+            .year(currentYear)
+            .isChampionAvailableForCurrentYear(true)
+            .build();
+        
+        when(seasonInfoRepository.findByYear(currentYear)).thenReturn(seasonInfo);
+        when(ergastApiService.fetchWorldChampion(eq(currentYear)))
+            .thenReturn(ResponseEntity.ok(champion));
+        when(championRepository.save(any(Champion.class))).thenReturn(champion);
+        
+        // Act
+        ResponseEntity<ChampionDTO> result = championService.getChampion(currentYear);
+        
+        // Assert
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        verify(cacheService).evictChampionCache("allChampions");
+    }
+
+    @Test
+    void getChampion_WhenExistingChampion_ShouldNotEvictCache() {
+        // Arrange
+        when(championRepository.findByYear(2023)).thenReturn(Optional.of(testChampion));
+
+        // Act
+        championService.getChampion(2023);
+
+        // Assert
+        verify(cacheService, never()).evictChampionCache(anyString());
+    }
+
+    @Test
+    void getChampions_WhenCached_ShouldNotEvictCache() {
+        // Arrange
+        List<Champion> champions = Arrays.asList(testChampion);
+        when(championRepository.findAll()).thenReturn(champions);
+        when(seasonInfoRepository.findByYear(currentYear))
+            .thenReturn(SeasonInfo.builder()
+                .year(currentYear)
+                .isChampionAvailableForCurrentYear(true)
+                .build());
+
+        // Act
+        championService.getChampions();
+
+        // Assert
+        verify(cacheService, never()).evictChampionCache(anyString());
     }
 }

@@ -6,13 +6,24 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <footer class="bg-gray-900 py-6 mt-10">
+    <footer class="bg-gray-900 py-6 mt-10 fixed-footer">
       <div class="container mx-auto px-4 text-center text-gray-400">
-        <p>Data provided by the Ergast Developer API</p>
-        <p class="mt-2 text-sm">© 2024 F1 Champions Explorer</p>
+        <p class="text-base">Data provided by https://api.jolpi.ca</p>
+        <p class="mt-2 text-sm">© 2025 F1 Champions Explorer</p>
       </div>
     </footer>
   `,
-  styleUrls: ['./footer.component.scss']
+  styles: [`
+    .fixed-footer {
+      min-height: 100px;
+      width: 100%;
+      position: relative;
+      bottom: 0;
+    }
+    .text-base {
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+  `]
 })
 export class FooterComponent {} 

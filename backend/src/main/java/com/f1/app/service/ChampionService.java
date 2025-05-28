@@ -6,7 +6,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -31,11 +33,27 @@ public class ChampionService {
     private final ErgastApiService ergastApiService;
     private final ChampionRepository championRepository;
     private final SeasonInfoRepository seasonInfoRepository;
+    private final RedisCacheManager redisCacheManager;
+    private final CacheService cacheService;
+    private static final String CACHE_NAME = "champions";
+
+    @CacheEvict(value = "champions", key = "'currentYear'")
+    public void evictCurrentYearCache() {
+        log.info("Evicting current year champion cache");
+        cacheService.evictChampionCache("currentYear");
+    }
+
+    @CacheEvict(value = "champions", key = "'allChampions'")
+    public void evictAllChampionsCache() {
+        log.info("Evicting all champions list cache");
+        cacheService.evictChampionCache("allChampions");
+    }
 
     @Async
     @Transactional
     public void initializeChampionData() {
         try {
+            evictCurrentYearCache(); // Evict current year cache before update
             log.info("Starting champion data initialization...");
             int currentYear = java.time.Year.now().getValue();
             final int END_YEAR = 2005;
@@ -97,7 +115,7 @@ public class ChampionService {
         }
     }
 
-    @Cacheable(value = "champions")
+    @Cacheable(value = "champions", key = "'allChampions'")
     public ResponseEntity<List<ChampionDTO>> getChampions() {
         try {
             int currentYear = java.time.Year.now().getValue();
@@ -136,6 +154,7 @@ public class ChampionService {
         }
     }
 
+    @Cacheable(value = "champions", key = "#year", unless = "#result.statusCode.is4xxClientError()")
     public ResponseEntity<ChampionDTO> getChampion(int year) {
         try {
             // For current year, check availability first
@@ -167,6 +186,8 @@ public class ChampionService {
             Champion champion = apiResponse.getBody();
             try {
                 championRepository.save(champion);
+                // Evict the allChampions cache since we added a new champion
+                evictAllChampionsCache();
             } catch (Exception e) {
                 log.warn("Failed to save champion to database", e);
                 // Continue execution as we still have the champion data

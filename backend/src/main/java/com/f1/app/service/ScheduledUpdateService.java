@@ -22,10 +22,16 @@ public class ScheduledUpdateService {
     private final ChampionService championService;
     private final ErgastApiService ergastApiService;
     private final SeasonInfoRepository seasonInfoRepository;
+    private final RaceService raceService;
 
-    @Scheduled(cron = "0 0 0 * * *") // Run at midnight every day
+    @Scheduled(cron = "0 0 0 * * 1") // Run at midnight every Monday (0 0 0 = midnight, 1 = Monday)
     public void scheduledTasks() {
-        log.info("Running scheduled tasks");
+        log.info("Running weekly scheduled tasks");
+        
+        // Only evict cache for current year as that's the only data that might change
+        int currentYear = Year.now().getValue();
+        raceService.evictRaceCache(currentYear);
+        
         updateChampions();
         updateLastRaceInfo();
     }
@@ -55,6 +61,9 @@ public class ScheduledUpdateService {
                     .build();
                 
                 seasonInfoRepository.save(seasonInfo);
+                
+                // Cache is already evicted at the start of scheduledTasks
+                
                 log.info("Updated season info for year: {}", currentYear);
             });
     }

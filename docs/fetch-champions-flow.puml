@@ -1,0 +1,80 @@
+@startuml Fetch World Champions Flow
+
+skinparam BoxPadding 10
+skinparam ParticipantPadding 20
+
+title F1 World Champions Fetching Flow
+
+actor User
+participant "Angular Frontend\n(SeasonListComponent)" as Frontend
+participant "Backend Controller\n(ChampionController)" as Controller
+participant "Champion Service" as Service
+participant "Caffeine Cache\n(Local)" as LocalCache
+participant "Redis Cache\n(Distributed)" as Redis
+participant "MySQL Database" as DB
+participant "Ergast F1 API" as ExternalAPI
+
+User -> Frontend: View Champions List
+activate Frontend
+
+Frontend -> Controller: GET /api/v1/champions
+activate Controller
+
+Controller -> Service: getChampions()
+activate Service
+
+Service -> LocalCache: Check local cache
+activate LocalCache
+
+alt Local Cache Hit
+    LocalCache --> Service: Return cached champions
+else Local Cache Miss
+    LocalCache --> Service: Cache miss
+    Service -> Redis: Check distributed cache
+    activate Redis
+
+    alt Redis Cache Hit
+        Redis --> Service: Return cached champions
+        Service -> LocalCache: Update local cache
+        LocalCache --> Service: Confirmation
+    else Redis Cache Miss
+        Redis --> Service: Cache miss
+        Service -> DB: findAll()
+        activate DB
+        
+        alt Data in DB
+            DB --> Service: Return champions
+        else Empty DB
+            DB --> Service: Empty result
+            Service -> ExternalAPI: Fetch champions data
+            activate ExternalAPI
+            ExternalAPI --> Service: Champions data
+            deactivate ExternalAPI
+            
+            Service -> DB: Save champions
+            DB --> Service: Saved data
+        end
+        
+        Service -> Redis: Store in distributed cache
+        Redis --> Service: Confirmation
+        Service -> LocalCache: Store in local cache
+        LocalCache --> Service: Confirmation
+        deactivate DB
+    end
+    deactivate Redis
+end
+
+deactivate LocalCache
+
+Service --> Controller: List<ChampionDTO>
+deactivate Service
+
+Controller --> Frontend: JSON Response
+deactivate Controller
+
+Frontend -> Frontend: Update UI
+Frontend --> User: Display Champions List
+
+deactivate Frontend
+
+@enduml 

@@ -31,6 +31,9 @@ class ScheduledUpdateServiceTest {
     @Mock
     private SeasonInfoRepository seasonInfoRepository;
 
+    @Mock
+    private RaceService raceService;
+
     @InjectMocks
     private ScheduledUpdateService scheduledUpdateService;
 
@@ -52,6 +55,7 @@ class ScheduledUpdateServiceTest {
         scheduledUpdateService.scheduledTasks();
 
         // Assert
+        verify(raceService).evictRaceCache(currentYear);
         verify(championService).initializeChampionData();
         verify(ergastApiService).fetchLastRaceOfSeason(currentYear);
         verify(seasonInfoRepository).save(any(SeasonInfo.class));
@@ -67,6 +71,7 @@ class ScheduledUpdateServiceTest {
         scheduledUpdateService.scheduledTasks();
 
         // Assert
+        verify(raceService).evictRaceCache(currentYear);
         verify(championService).initializeChampionData();
         verify(ergastApiService).fetchLastRaceOfSeason(currentYear);
         verify(seasonInfoRepository, never()).save(any(SeasonInfo.class));
@@ -89,6 +94,7 @@ class ScheduledUpdateServiceTest {
         scheduledUpdateService.scheduledTasks();
 
         // Assert
+        verify(raceService).evictRaceCache(currentYear);
         verify(seasonInfoRepository).save(argThat(seasonInfo -> 
             !seasonInfo.isChampionAvailableForCurrentYear()));
     }
@@ -110,6 +116,7 @@ class ScheduledUpdateServiceTest {
         scheduledUpdateService.scheduledTasks();
 
         // Assert
+        verify(raceService).evictRaceCache(currentYear);
         verify(seasonInfoRepository).save(argThat(seasonInfo -> 
             seasonInfo.isChampionAvailableForCurrentYear()));
     }

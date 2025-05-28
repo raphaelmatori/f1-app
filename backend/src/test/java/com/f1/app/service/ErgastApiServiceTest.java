@@ -15,20 +15,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
-import org.springframework.cache.Cache;
-import org.springframework.context.ApplicationContext;
-import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -36,6 +33,7 @@ import org.springframework.web.client.RestTemplate;
 import com.f1.app.dto.ErgastChampionResponse;
 import com.f1.app.dto.ErgastRaceResponse;
 import com.f1.app.dto.RaceDTO;
+import com.f1.app.exception.ServiceException;
 import com.f1.app.model.Champion;
 import com.f1.app.model.Race;
 import com.f1.app.model.RaceResult;
@@ -51,19 +49,13 @@ class ErgastApiServiceTest {
     @Mock
     private RaceRepository raceRepository;
     @Mock
-    private RedisCacheManager redisCacheManager;
-    @Mock
-    private Cache redisCache;
-    @Mock
-    private ApplicationContext applicationContext;
+    private CacheService cacheService;
     @InjectMocks
     private ErgastApiService ergastApiService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        when(redisCacheManager.getCache(anyString())).thenReturn(redisCache);
-        when(applicationContext.getBean(ErgastApiService.class)).thenReturn(ergastApiService);
     }
 
     // --- Champion tests (existing) ---
@@ -185,7 +177,103 @@ class ErgastApiServiceTest {
         when(raceRepository.save(any(Race.class))).thenThrow(new RuntimeException("Database error"));
 
         // Execute and verify
-        assertThrows(RuntimeException.class, () -> ergastApiService.fetchAndSaveRaces(2023, "http://fake-url"));
+        ServiceException exception = assertThrows(ServiceException.class, () -> 
+            ergastApiService.fetchAndSaveRaces(2023, "http://fake-url"));
+        assertEquals("Failed to save races to database", exception.getMessage());
+        assertEquals("RACES_SAVE_ERROR", exception.getCode());
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getStatus());
+    }
+
+    @Test
+    void fetchAndSaveRaces_WhenSuccessful_EvictsCacheAndReturnsData() {
+        // Arrange
+        ErgastRaceResponse.RaceData raceData = createRaceData("1", "HAM");
+        ErgastRaceResponse response = createRaceResponse(raceData);
+        when(restTemplate.getForEntity(anyString(), eq(ErgastRaceResponse.class)))
+                .thenReturn(ResponseEntity.ok(response));
+        when(raceRepository.save(any(Race.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Act
+        List<RaceDTO> result = ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(cacheService).evictRaceCache(TEST_YEAR);
+    }
+
+    @Test
+    void fetchAndSaveRaces_WhenMergingDuplicateRaces_MergesResults() {
+        // Arrange
+        ErgastRaceResponse.RaceData race1 = createRaceData("1", "HAM");
+        ErgastRaceResponse.RaceData race2 = createRaceData("2", "VER");
+        
+        // First response with total=2 and offset=0
+        ErgastRaceResponse response1 = ErgastRaceResponse.builder()
+                .mrData(ErgastRaceResponse.MRData.builder()
+                        .total("2")
+                        .offset("0")
+                        .limit("100")
+                        .raceTable(ErgastRaceResponse.RaceTable.builder()
+                                .races(List.of(race1))
+                                .build())
+                        .build())
+                .build();
+                
+        // Second response with total=2 and offset=1
+        ErgastRaceResponse response2 = ErgastRaceResponse.builder()
+                .mrData(ErgastRaceResponse.MRData.builder()
+                        .total("2")
+                        .offset("1")
+                        .limit("100")
+                        .raceTable(ErgastRaceResponse.RaceTable.builder()
+                                .races(List.of(race2))
+                                .build())
+                        .build())
+                .build();
+
+        // Mock repository to return the same race object that was passed
+        when(raceRepository.save(any(Race.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Mock API calls
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        when(restTemplate.getForEntity(urlCaptor.capture(), eq(ErgastRaceResponse.class)))
+            .thenAnswer(invocation -> {
+                String url = urlCaptor.getValue();
+                if (url.contains("offset=0")) {
+                    return ResponseEntity.ok(response1);
+                } else if (url.contains("offset=1")) {
+                    return ResponseEntity.ok(response2);
+                }
+                return ResponseEntity.notFound().build();
+            });
+
+        // Act
+        List<RaceDTO> result = ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(2, result.size(), "Should have two races with different rounds");
+        
+        // Verify each race has one result
+        result.forEach(race -> {
+            assertEquals(1, race.getResults().size(), 
+                "Each race should have exactly one result");
+        });
+        
+        // Verify we have both HAM and VER results
+        List<String> driverCodes = result.stream()
+            .flatMap(race -> race.getResults().stream())
+            .map(raceResult -> raceResult.getDriver().getCode())
+            .collect(Collectors.toList());
+        assertTrue(driverCodes.contains("HAM"), "Should contain Hamilton's result");
+        assertTrue(driverCodes.contains("VER"), "Should contain Verstappen's result");
+
+        // Verify cache was evicted
+        verify(cacheService).evictRaceCache(TEST_YEAR);
+        
+        // Verify both API calls were made
+        verify(restTemplate, times(2)).getForEntity(anyString(), eq(ErgastRaceResponse.class));
     }
 
     // Helper method to create mock race data
@@ -372,123 +460,74 @@ class ErgastApiServiceTest {
     }
 
     @Test
-    void saveRacesInRedisAsync_WhenCacheThrowsException_HandlesError() {
-        List<Race> races = new ArrayList<>();
+    void saveRacesInDatabaseAsync_WhenSaveSucceeds_ReturnsCompletedFuture() {
         Race race = Race.builder()
                 .season(TEST_YEAR)
                 .round(1)
                 .raceName("Test Race")
                 .build();
-        races.add(race);
-
-        List<RaceDTO> raceDTOs = races.stream()
-                .map(RaceDTO::fromEntity)
-                .collect(Collectors.toList());
-
-        when(redisCacheManager.getCache(anyString())).thenReturn(redisCache);
-        doThrow(new RuntimeException("Cache error"))
-                .when(redisCache).put(any(), any());
-
-        CompletableFuture<Void> future = ergastApiService.saveRacesInRedisAsync(TEST_YEAR, raceDTOs);
-        assertDoesNotThrow(() -> future.get(1, TimeUnit.SECONDS));
-    }
-
-    @Test
-    void saveRacesInDatabaseAsync_WhenSaveSucceeds_ReturnsCompletedFuture() {
-        List<Race> races = new ArrayList<>();
-        Race race = Race.builder()
-                .season(TEST_YEAR)
-                .round(1)
-                .build();
-        races.add(race);
+        List<Race> races = List.of(race);
 
         when(raceRepository.save(any(Race.class))).thenReturn(race);
 
         CompletableFuture<Void> future = ergastApiService.saveRacesInDatabaseAsync(races, TEST_YEAR);
-        assertNotNull(future);
-        assertDoesNotThrow(() -> future.get());
-        verify(raceRepository).save(any(Race.class));
+        assertDoesNotThrow(() -> future.get(1, TimeUnit.SECONDS));
+        verify(raceRepository).save(race);
     }
 
-    @Test
-    void fetchAndSaveRaces_WhenMergingDuplicateRaces_MergesResults() {
-        // First response with one race
-        ErgastRaceResponse firstResponse = ErgastRaceResponse.builder()
+    private ErgastRaceResponse createRaceResponse(ErgastRaceResponse.RaceData... races) {
+        return ErgastRaceResponse.builder()
                 .mrData(ErgastRaceResponse.MRData.builder()
-                        .total("101")
+                        .total("1")
                         .raceTable(ErgastRaceResponse.RaceTable.builder()
-                                .races(List.of(createRaceData("1", "HAM")))
+                                .races(List.of(races))
                                 .build())
                         .build())
                 .build();
-
-        // Second response with same race but different result
-        ErgastRaceResponse secondResponse = ErgastRaceResponse.builder()
-                .mrData(ErgastRaceResponse.MRData.builder()
-                        .total("101")
-                        .raceTable(ErgastRaceResponse.RaceTable.builder()
-                                .races(List.of(createRaceData("2", "VER")))
-                                .build())
-                        .build())
-                .build();
-
-        when(restTemplate.getForEntity(contains("offset=0"), eq(ErgastRaceResponse.class)))
-                .thenReturn(ResponseEntity.ok(firstResponse));
-        when(restTemplate.getForEntity(contains("offset=100"), eq(ErgastRaceResponse.class)))
-                .thenReturn(ResponseEntity.ok(secondResponse));
-
-        // Mock repository save to return the same race
-        when(raceRepository.save(any(Race.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        List<RaceDTO> result = ergastApiService.fetchAndSaveRaces(TEST_YEAR, "http://test-url");
-
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        RaceDTO raceDTO = result.get(0);
-        assertNotNull(raceDTO.getResults());
-        assertEquals(2, raceDTO.getResults().size());
-
-        verify(restTemplate, times(2)).getForEntity(anyString(), eq(ErgastRaceResponse.class));
     }
 
-    private ErgastRaceResponse.RaceData createRaceData(String position, String driverCode) {
+    private ErgastRaceResponse.RaceData createRaceData(String round, String driverCode) {
         return ErgastRaceResponse.RaceData.builder()
                 .season("2023")
-                .round("1")
-                .raceName("Test Race")
-                .date("2023-03-05")
-                .time("15:00:00Z")
+                .round(round)
+                .raceName("Test GP " + round)
+                .date(round.equals("1") ? "2023-03-05" : "2023-03-19")
+                .time("13:00:00Z")
                 .circuit(ErgastRaceResponse.CircuitData.builder()
-                        .circuitId("test_circuit")
-                        .circuitName("Test Circuit")
+                        .circuitId("test_circuit_" + round)
+                        .circuitName("Test Circuit " + round)
                         .location(ErgastRaceResponse.LocationData.builder()
-                                .locality("Test City")
-                                .country("Test Country")
+                                .locality("Test City " + round)
+                                .country("Test Country " + round)
                                 .build())
                         .build())
-                .results(List.of(ErgastRaceResponse.ResultData.builder()
-                        .position(position)
-                        .points(position.equals("1") ? "25" : "18")
-                        .grid(position)
-                        .laps("58")
-                        .status("Finished")
-                        .driver(ErgastRaceResponse.DriverData.builder()
-                                .driverId(driverCode.toLowerCase())
-                                .code(driverCode)
-                                .givenName(driverCode.equals("HAM") ? "Lewis" : "Max")
-                                .familyName(driverCode.equals("HAM") ? "Hamilton" : "Verstappen")
-                                .nationality(driverCode.equals("HAM") ? "British" : "Dutch")
-                                .build())
-                        .constructor(ErgastRaceResponse.ConstructorData.builder()
-                                .constructorId(driverCode.toLowerCase() + "_team")
-                                .name(driverCode.equals("HAM") ? "Mercedes" : "Red Bull")
-                                .nationality(driverCode.equals("HAM") ? "German" : "Austrian")
-                                .build())
-                        .time(ErgastRaceResponse.TimeData.builder()
-                                .millis("5400000")
-                                .time("1:30:00.000")
-                                .build())
-                        .build()))
+                .results(List.of(createResultData(driverCode)))
+                .build();
+    }
+
+    private ErgastRaceResponse.ResultData createResultData(String driverCode) {
+        return ErgastRaceResponse.ResultData.builder()
+                .position(driverCode)
+                .points(driverCode.equals("HAM") ? "25" : "18")
+                .grid(driverCode)
+                .laps("58")
+                .status("Finished")
+                .driver(ErgastRaceResponse.DriverData.builder()
+                        .driverId(driverCode.toLowerCase())
+                        .code(driverCode)
+                        .givenName(driverCode.equals("HAM") ? "Lewis" : "Max")
+                        .familyName(driverCode.equals("HAM") ? "Hamilton" : "Verstappen")
+                        .nationality(driverCode.equals("HAM") ? "British" : "Dutch")
+                        .build())
+                .constructor(ErgastRaceResponse.ConstructorData.builder()
+                        .constructorId(driverCode.toLowerCase() + "_team")
+                        .name(driverCode.equals("HAM") ? "Mercedes" : "Red Bull")
+                        .nationality(driverCode.equals("HAM") ? "German" : "Austrian")
+                        .build())
+                .time(ErgastRaceResponse.TimeData.builder()
+                        .millis("5400000")
+                        .time("1:30:00.000")
+                        .build())
                 .build();
     }
 
