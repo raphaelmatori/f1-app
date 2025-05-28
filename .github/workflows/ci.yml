@@ -1,0 +1,283 @@
+name: Combined CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # ───────────────────────────────────────────── FRONTEND ─────────────────────────────────────────────
+
+  frontend-install-and-cache:
+    runs-on: ubuntu-latest
+    needs: security-scan-frontend
+    outputs:
+      cache-hit: ${{ steps.cache-npm.outputs.cache-hit }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+  frontend-lint:
+    runs-on: ubuntu-latest
+    needs: frontend-install-and-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Run lint
+        working-directory: ./frontend
+        run: npm run lint
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    needs: frontend-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Run tests
+        working-directory: ./frontend
+        run: npm run test:cicd
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build:prod
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+  frontend-deploy:
+    runs-on: ubuntu-latest
+    needs: e2e
+    environment: f1-world-champions
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Link to existing Vercel project
+        run: |
+          vercel link --project=f1-world-champions --token=${{ secrets.VERCEL_TOKEN }} --yes
+        working-directory: frontend/dist/f1-app/browser
+
+
+      - name: Deploy to Vercel
+        run: vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --confirm
+        working-directory: frontend/dist/f1-app/browser
+
+
+  # ───────────────────────────────────────────── BACKEND ─────────────────────────────────────────────
+
+  backend-install:
+    needs: [security-scan-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+          cache-dependency-path: backend/build.gradle
+      - name: Grant permission to gradlew
+        working-directory: ./backend
+        run: chmod +x gradlew
+
+  backend-build:
+    needs: backend-install
+    runs-on: ubuntu-latest
+    environment: f1-world-champions
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend
+        working-directory: ./backend
+        run: ./gradlew build --no-daemon
+        env:
+          SPRING_PROFILES_ACTIVE: prod
+          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+          MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      - name: Upload backend build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: backend/build/libs
+          retention-days: 7
+
+  backend-deploy:
+    needs: backend-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: f1-world-champions
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download backend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: ./backend/build/libs
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy f1-app \
+            --source ./backend \
+            --project ${{ secrets.GCP_PROJECT_ID }} \
+            --region europe-west4 \
+            --platform managed \
+            --allow-unauthenticated
+
+  # ───────────────────────────────────────────── E2E TESTS ─────────────────────────────────────────────
+
+  e2e:
+    needs: [frontend-test, backend-deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build:prod
+      - name: Install static server
+        run: npm install -g serve
+      - name: Serve frontend
+        working-directory: ./frontend
+        run: |
+          npm start > frontend.log 2>&1 &
+      - name: Wait for frontend to be ready
+        run: |
+          timeout 60 bash -c 'until curl -s http://localhost:4200 > /dev/null; do sleep 2; done'
+      - name: Run E2E tests
+        working-directory: ./frontend
+        env:
+          CYPRESS_baseUrl: http://localhost:4200
+        run: npm run e2e:headless
+
+  # ───────────────────────────────────────────── SECURITY SCANS ─────────────────────────────────────────────
+
+  security-scan-backend:
+    runs-on: ubuntu-latest
+    environment: f1-world-champions
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      - name: Cache Dependency-Check NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.dependency-check
+          key: owasp-nvd-${{ runner.os }}
+          restore-keys: |
+            owasp-nvd-${{ runner.os }}
+      - name: Run OWASP Dependency Check
+        working-directory: ./backend
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: ./gradlew dependencyCheckAnalyze --info
+
+  security-scan-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run npm audit
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm audit --json > audit-report.json || true
+
+  # ───────────────────────────────────────────── NOTIFICATIONS ─────────────────────────────────────────────
+
+  notify:
+    needs: [frontend-deploy, backend-deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
+            const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
+            
+            github.rest.issues.create({
+              owner,
+              repo,
+              title: `CI Pipeline Failed - Run #${run_id}`,
+              body: `The CI pipeline has failed. Please check the [run details](${run_url}) for more information.`
+            });
