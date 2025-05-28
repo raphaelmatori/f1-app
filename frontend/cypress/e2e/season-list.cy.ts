@@ -3,7 +3,7 @@ describe('Season List', () => {
     // Mock champions API with delay to test loading spinner
     cy.intercept('GET', '**/api/v1/champions', {
       fixture: 'f1-api/champions.json',
-      delay: 1000 // Add delay to ensure loading state is visible
+      delay: 1000
     }).as('getChampions');
 
     // Mock race winners API
