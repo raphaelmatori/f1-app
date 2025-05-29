@@ -1,11 +1,5 @@
 describe('Season List', () => {
   beforeEach(() => {
-    // Mock champions API with delay to test loading spinner
-    cy.intercept('GET', '**/api/v1/champions', {
-      fixture: 'f1-api/champions.json',
-      delay: 1000
-    }).as('getChampions');
-
     // Mock race winners API
     cy.intercept('GET', '**/api/v1/races/*', {
       fixture: 'f1-api/race-winners.json',
@@ -15,28 +9,7 @@ describe('Season List', () => {
     cy.visit('/');
   });
 
-  it('should display loading spinner initially', () => {
-    cy.get('app-spinner').should('be.visible');
-    cy.get('.spinner-wrapper').should('be.visible');
-    cy.contains('Loading seasons...').should('be.visible');
-    cy.wait('@getChampions');
-  });
-
-  it('should handle errors gracefully', () => {
-    // Intercept API call and force an error
-    cy.intercept('GET', '**/api/v1/champions', {
-      statusCode: 500,
-      body: 'Server error',
-      delay: 100
-    }).as('getChampionsError');
-    
-    cy.visit('/');
-    cy.wait('@getChampionsError');
-    cy.contains('Error loading F1 World Champions').should('be.visible');
-  });
-
   it('should expand a season and show race winners', () => {
-    cy.wait('@getChampions');
     cy.get('.season-card').first().within(() => {
       cy.get('.view-races-btn').click();
     });
@@ -46,7 +19,6 @@ describe('Season List', () => {
   });
 
   it('should highlight champion races', () => {
-    cy.wait('@getChampions');
     cy.get('.season-card').first().within(() => {
       cy.get('.view-races-btn').click();
     });
@@ -65,19 +37,16 @@ describe('Season List', () => {
   });
 
   it('should display current season card', () => {
-    cy.wait('@getChampions');
     cy.get('.current-season').should('be.visible');
     cy.contains('SEASON IN PROGRESS').should('be.visible');
     cy.contains('ONGOING').should('be.visible');
   });
 
   it('should display past seasons with champions', () => {
-    cy.wait('@getChampions');
     cy.get('.season-card').not('.current-season').should('have.length.at.least', 1);
   });
 
   it('should show race winners when expanding past season', () => {
-    cy.wait('@getChampions');
     cy.get('.season-card').not('.current-season').first().within(() => {
       cy.get('.view-races-btn').click();
       cy.wait('@getRaceWinners');

@@ -82,20 +82,10 @@ describe('CurrentSeasonCardComponent', () => {
     changeDetectorRef.detectChanges();
     fixture.detectChanges();
 
-    // Debug output
-    const debugElement = fixture.debugElement;
-    console.log('Component HTML:', debugElement.nativeElement.innerHTML);
-    console.log('isExpanded:', component.isExpanded);
-    console.log('races:', component.races);
-    
     // Try different ways to find the race list component
     const raceListBySelector = fixture.debugElement.query(By.css('app-race-list'));
     const raceListByDirective = fixture.debugElement.query(By.directive(RaceListStubComponent));
     const raceListByClass = fixture.debugElement.query(By.css('.race-list-stub'));
-    
-    console.log('Race List By Selector:', raceListBySelector);
-    console.log('Race List By Directive:', raceListByDirective);
-    console.log('Race List By Class:', raceListByClass);
     
     // Check if any of the queries found the component
     const raceListFound = raceListBySelector || raceListByDirective || raceListByClass;

@@ -1,6 +1,6 @@
 <div class="race-list">
   <app-spinner *ngIf="loading" [loadingText]="messages.LOADING.RACE_DATA(year)" />
-  
+
   <div *ngIf="!loading && (!races || races.length === 0)" class="text-center py-6 text-gray-400">
     <p>{{ messages.ERROR.NO_RACE_DATA(year) }}</p>
   </div>
@@ -21,4 +21,4 @@
       </app-race-item>
     </div>
   </div>
-</div> 
+</div>

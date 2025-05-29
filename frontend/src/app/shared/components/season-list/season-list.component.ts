@@ -80,17 +80,17 @@ export class SeasonListComponent implements OnInit {
   loadRaces(year: number) {
     this.f1Service.getAllRacesWinnersOfAYear(year).subscribe({
       next: (data) => {
-        this.races[year] = data.map((race: any) => ({
+        this.races[year] = data.map((race: Race) => ({
           season: race.season,
           round: race.round,
-          url: race.url,
           raceName: race.raceName,
           date: race.date,
-          circuitName: race.circuit.circuitName,
+          time: race.time,
+          circuit: race.circuit,
+          results: race.results,
+          // Derive winner and constructor from first position
           winner: race.results[0]?.driver,
-          constructor: race.results[0]?.constructor,
-          Circuit: race.circuit,
-          Results: race.results
+          constructor: race.results[0]?.constructor
         }));
       },
       error: (err) => {
