@@ -9,7 +9,7 @@ describe('Season List', () => {
     cy.visit('/');
   });
 
-  it('should expand a season and show race winners', () => {
+  it('', () => {
     cy.get('.season-card').first().within(() => {
       cy.get('.view-races-btn').click();
     });

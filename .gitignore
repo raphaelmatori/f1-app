@@ -20,6 +20,7 @@ out/
 *.ear
 *.log
 hs_err_pid*
+bin/
 
 # IDEs
 .idea/
@@ -53,6 +54,7 @@ pnpm-debug.log*
 .cache/
 .next/
 output/
+.vercel
 
 # -------------------------------
 # Local configs

@@ -211,7 +211,7 @@ class ErgastApiServiceTest {
         // First response with total=2 and offset=0
         ErgastRaceResponse response1 = ErgastRaceResponse.builder()
                 .mrData(ErgastRaceResponse.MRData.builder()
-                        .total("2")
+                        .total("200")
                         .offset("0")
                         .limit("100")
                         .raceTable(ErgastRaceResponse.RaceTable.builder()
@@ -223,8 +223,8 @@ class ErgastApiServiceTest {
         // Second response with total=2 and offset=1
         ErgastRaceResponse response2 = ErgastRaceResponse.builder()
                 .mrData(ErgastRaceResponse.MRData.builder()
-                        .total("2")
-                        .offset("1")
+                        .total("200")
+                        .offset("100")
                         .limit("100")
                         .raceTable(ErgastRaceResponse.RaceTable.builder()
                                 .races(List.of(race2))

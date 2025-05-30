@@ -144,7 +144,7 @@ public class ErgastApiService {
                         }
                     }
                 }
-                offset += 1;
+                offset += 100;
             } while (offset < total);
 
             if (allRaces.isEmpty()) {
