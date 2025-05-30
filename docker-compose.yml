@@ -13,7 +13,6 @@ services:
       retries: 3
       start_period: 60s
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
       - MYSQL_PORT=${MYSQL_PORT}
       - MYSQL_HOST=${MYSQL_HOST}
       - MYSQL_USER=${MYSQL_USER}

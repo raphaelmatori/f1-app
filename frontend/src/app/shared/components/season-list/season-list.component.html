@@ -1,6 +1,6 @@
 <div class="season-list-wrapper">
     <app-spinner *ngIf="loading" [loadingText]="messages.LOADING.SEASONS" />
-    <div *ngIf="error" class="text-center py-6 text-red-500">
+    <div *ngIf="error && !loading" class="text-center py-6 text-red-500">
         <p>{{ error }}</p>
     </div>
     <div *ngIf="!loading && !error" class="grid grid-cols-1 gap-6">

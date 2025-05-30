@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:4000", "http://localhost:4200", "https://f1-world-champions.vercel.app"})
+@CrossOrigin(origins = {"http://localhost:4200", "https://f1-world-champions.vercel.app"})
 @Tag(name = "Champions", description = "F1 World Champions API")
 public class ChampionController {
 

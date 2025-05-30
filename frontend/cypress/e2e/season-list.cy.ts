@@ -9,7 +9,7 @@ describe('Season List', () => {
     cy.visit('/');
   });
 
-  it('', () => {
+  it('should expand a season and show race winners', () => {
     cy.get('.season-card').first().within(() => {
       cy.get('.view-races-btn').click();
     });
@@ -23,7 +23,7 @@ describe('Season List', () => {
       cy.get('.view-races-btn').click();
     });
     cy.wait('@getRaceWinners');
-    
+
     // Get the champion's name from the card
     cy.get('.season-card').first().find('h3').invoke('text').then((championName) => {
       // Find race items where the winner matches the champion
@@ -54,4 +54,4 @@ describe('Season List', () => {
       cy.get('.race-items').should('be.visible');
     });
   });
-}); 
+});
