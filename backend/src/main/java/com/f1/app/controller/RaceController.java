@@ -20,7 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:4000", "http://localhost:4200", "https://f1-world-champions.vercel.app"})
+@CrossOrigin(origins = {"http://localhost:4200", "https://f1-world-champions.vercel.app"})
 @Tag(name = "Races", description = "F1 Race Results API")
 public class RaceController {
 

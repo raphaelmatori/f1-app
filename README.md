@@ -149,7 +149,7 @@ docker compose -f docker-compose.dev.yml up --build
 
 This will start:
 - Backend (http://localhost:8080)
-- Frontend (http://localhost:4000)
+- Frontend (http://localhost:4200)
 - MySQL database
 - Redis cache
 - Adminer (http://localhost:8081)
@@ -274,7 +274,7 @@ The application includes comprehensive health checks for all services:
 - Backend Health: http://localhost:8080/actuator/health
 - MySQL Health: Monitored via backend health checks
 - Redis Health: Monitored via backend health checks
-- Frontend Health: Basic HTTP check on port 4000
+- Frontend Health: Basic HTTP check on port 4200
 
 ## Production Deployment
 
@@ -365,8 +365,11 @@ Key features of the Docker setup:
    cd frontend && npm run test:cicd
    ```
 6. Run the e2e test suite
-   - make sure you have the backend up and running on localhost:8080
-   
+   ```bash
+   # Frontend
+   cd frontend && ng serve
+   ``` 
+   - In another terminal window:
    ```bash
    # Frontend
    cd frontend && npm run e2e:headless
@@ -374,7 +377,7 @@ Key features of the Docker setup:
 
 7. Commit your changes (`git commit -m 'Add amazing feature'`)
 8. Push to the branch (`git push origin feature/amazing-feature`)
-9. Open a Pull Request
+9. Open a Pull Request towards develop branch
 
 ### Code Style
 
@@ -407,17 +410,19 @@ Key features of the Docker setup:
 - [x] Race winners: Clicking a season reveals all grand‑prix winners for that year
 - [x] Highlight champion in race list
 - [x] Frontend Components (Angular SPA: season list, race list, highlight champion, error/loading states)
-- [x] End-to-End Tests (frontend and backend integration)
+- [x] End-to-End Tests (in Cypress)
 - [x] CI/CD pipeline (GitHub Actions or similar: install → lint → test → build, reject on test failure)
-- [x] Dockerization: Multi-stage Dockerfiles, single docker-compose.yml for backend, DB, (optionally frontend)
+- [x] Dockerization: Multi-stage Dockerfiles, single docker-compose.yml for backend, DB and Frontend
 - [x] Healthchecks & environment variables in Docker
 - [x] Documentation: High-level architecture, API contract/schema, screenshots/diagrams
 - [x] Deployment Instructions (docker compose up, pipeline triggers)
-- [x] Containerized admin tool (e.g., pgAdmin, optional)
-- [x] Automatic deploy to free tier platform (Render, Railway, Fly.io, etc.)
-- [x] Docker image pushed to public registry (optional)
-- [x] Async job to refresh seasons weekly after every race (optional, nice to have)
-- [x] SSR/SSG (Next.js/Nuxt) or Lighthouse score ≥ 90 (optional, nice to have)
+- [x] Containerized admin tool (Adminer, for development with docker compose only)
+- [x] Automatic deploy to Google Cloud and Vercel
+- [x] Docker image pushed to public registry (raphaelmatori/f1-champions-backend:prod and raphaelmatori/f1-champions-frontend:prod)
+- [x] Async job to refresh seasons weekly after every race (Monday, at midnight)
+- [x] SSR
+- [x] Lighthouse score ≥ 90
+- [x] Block pushing directly to main branch
 
 ## Known Limitations
 
@@ -432,9 +437,6 @@ Key features of the Docker setup:
 3. Performance:
    - Basic caching implemented
    - Could be improved with more aggressive caching strategies
-
-4. Custom pipelines for each branch
-   - Currently, pipeline is only running for main branch
 
 ## License
 
