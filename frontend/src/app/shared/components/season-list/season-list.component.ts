@@ -59,12 +59,12 @@ export class SeasonListComponent implements OnInit {
           this.champions = auxChampionList;
         }
 
-        this.loading = false;
         this.error = '';
+        this.loading = false;
       },
       error: (err) => {
-        this.loading = false;
         this.error = 'Error loading F1 World Champions';
+        this.loading = false;
         console.error('Error loading F1 Wrold Champions:', err);
       }
     });
