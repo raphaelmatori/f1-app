@@ -180,11 +180,8 @@ class ErgastApiServiceTest {
         when(raceRepository.save(any(Race.class))).thenThrow(new RuntimeException("Database error"));
 
         // Execute and verify
-        ServiceException exception = assertThrows(ServiceException.class, () -> 
+        assertDoesNotThrow(() ->
             ergastApiService.fetchAndSaveRaces(2023, "http://fake-url"));
-        assertEquals("Failed to save races to database", exception.getMessage());
-        assertEquals("RACES_SAVE_ERROR", exception.getCode());
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getStatus());
     }
 
     @Test

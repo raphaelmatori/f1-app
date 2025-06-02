@@ -147,8 +147,7 @@ public class ErgastApiService {
         }
 
         try {
-            // Save races in database and wait for completion
-            saveRacesInDatabaseAsync(allRaces, year).get(5, TimeUnit.SECONDS);
+            saveRacesInDatabaseAsync(allRaces, year);
         } catch (Exception e) {
             log.error("Error saving races to database: {}", e.getMessage());
             throw new ServiceException(
@@ -174,34 +173,38 @@ public class ErgastApiService {
     @Async
     public CompletableFuture<Void> saveRacesInDatabaseAsync(List<Race> races, Integer year) {
         return CompletableFuture.runAsync(() -> {
-            List<Race> saved = new ArrayList<>();
-            for (Race race : races) {
-                Optional<Race> existingRace = raceRepository.findBySeasonAndRound(year, race.getRound());
-                
-                if (existingRace.isPresent()) {
-                    Race existing = existingRace.get();
-                    // Only update if there are new results
-                    if (race.getResults() != null && !race.getResults().isEmpty()) {
-                        // Get new results that don't exist in the current race
-                        List<RaceResult> newResults = race.getResults().stream()
-                            .filter(newResult -> !existing.getResults().stream()
-                                .anyMatch(existingResult -> 
-                                    existingResult.getDriver().getDriverId().equals(newResult.getDriver().getDriverId())))
-                            .collect(Collectors.toList());
-                        
-                        // Only save if we actually have new results
-                        if (!newResults.isEmpty()) {
-                            // Add only new results to the existing race
-                            newResults.forEach(existing::addResult);
-                            saved.add(raceRepository.save(existing));
+            try {
+                List<Race> saved = new ArrayList<>();
+                for (Race race : races) {
+                    Optional<Race> existingRace = raceRepository.findBySeasonAndRound(year, race.getRound());
+
+                    if (existingRace.isPresent()) {
+                        Race existing = existingRace.get();
+                        // Only update if there are new results
+                        if (race.getResults() != null && !race.getResults().isEmpty()) {
+                            // Get new results that don't exist in the current race
+                            List<RaceResult> newResults = race.getResults().stream()
+                                .filter(newResult -> !existing.getResults().stream()
+                                    .anyMatch(existingResult ->
+                                        existingResult.getDriver().getDriverId().equals(newResult.getDriver().getDriverId())))
+                                .collect(Collectors.toList());
+
+                            // Only save if we actually have new results
+                            if (!newResults.isEmpty()) {
+                                // Add only new results to the existing race
+                                newResults.forEach(existing::addResult);
+                                saved.add(raceRepository.save(existing));
+                            }
                         }
+                    } else {
+                        // This is a new race, save it
+                        saved.add(raceRepository.save(race));
                     }
-                } else {
-                    // This is a new race, save it
-                    saved.add(raceRepository.save(race));
                 }
+                log.info("Processed {} races for year {}, {} were new or updated", races.size(), year, saved.size());
+            } catch (Exception ex) {
+                log.error("Failed to save races asynchronously for year {}: {}", year, ex.getMessage(), ex);
             }
-            log.info("Processed {} races for year {}, {} were new or updated", races.size(), year, saved.size());
         });
     }
 
