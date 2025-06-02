@@ -150,8 +150,8 @@ docker compose -f docker-compose.dev.yml up --build
 This will start:
 - Backend (http://localhost:8080)
 - Frontend (http://localhost:4200)
-- MySQL database
-- Redis cache
+- MySQL database (port 3306)
+- Redis cache (port 6379)
 - Adminer (http://localhost:8081)
 
 ### Manual Development Setup
