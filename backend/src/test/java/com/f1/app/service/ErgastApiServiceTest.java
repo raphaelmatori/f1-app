@@ -3,6 +3,7 @@ package com.f1.app.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -18,9 +19,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -208,7 +211,7 @@ class ErgastApiServiceTest {
         ErgastRaceResponse.RaceData race1 = createRaceData("1", "HAM");
         ErgastRaceResponse.RaceData race2 = createRaceData("2", "VER");
         
-        // First response with total=2 and offset=0
+        // First response with total=200 and offset=0
         ErgastRaceResponse response1 = ErgastRaceResponse.builder()
                 .mrData(ErgastRaceResponse.MRData.builder()
                         .total("200")
@@ -220,7 +223,7 @@ class ErgastApiServiceTest {
                         .build())
                 .build();
                 
-        // Second response with total=2 and offset=1
+        // Second response with total=200 and offset=100
         ErgastRaceResponse response2 = ErgastRaceResponse.builder()
                 .mrData(ErgastRaceResponse.MRData.builder()
                         .total("200")
@@ -469,10 +472,157 @@ class ErgastApiServiceTest {
         List<Race> races = List.of(race);
 
         when(raceRepository.save(any(Race.class))).thenReturn(race);
+        when(raceRepository.findBySeasonAndRound(TEST_YEAR, 1)).thenReturn(Optional.empty());
 
         CompletableFuture<Void> future = ergastApiService.saveRacesInDatabaseAsync(races, TEST_YEAR);
         assertDoesNotThrow(() -> future.get(1, TimeUnit.SECONDS));
         verify(raceRepository).save(race);
+    }
+
+    @Test
+    void saveRacesInDatabaseAsync_WithExistingRace_OnlyAddsNewResults() {
+        // Create an existing race with one result
+        Race existingRace = Race.builder()
+                .season(TEST_YEAR)
+                .round(1)
+                .raceName("Test Race")
+                .results(new ArrayList<>())
+                .build();
+        
+        RaceResult existingResult = RaceResult.builder()
+                .driver(RaceResult.Driver.builder()
+                        .driverId("hamilton")
+                        .build())
+                .build();
+        existingRace.addResult(existingResult);
+
+        // Create a new race with two results (one existing, one new)
+        Race newRace = Race.builder()
+                .season(TEST_YEAR)
+                .round(1)
+                .raceName("Test Race")
+                .results(new ArrayList<>())
+                .build();
+        
+        RaceResult existingDriverResult = RaceResult.builder()
+                .driver(RaceResult.Driver.builder()
+                        .driverId("hamilton")
+                        .build())
+                .build();
+        RaceResult newDriverResult = RaceResult.builder()
+                .driver(RaceResult.Driver.builder()
+                        .driverId("verstappen")
+                        .build())
+                .build();
+        
+        newRace.addResult(existingDriverResult);
+        newRace.addResult(newDriverResult);
+
+        when(raceRepository.findBySeasonAndRound(TEST_YEAR, 1)).thenReturn(Optional.of(existingRace));
+        when(raceRepository.save(any(Race.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Execute
+        CompletableFuture<Void> future = ergastApiService.saveRacesInDatabaseAsync(List.of(newRace), TEST_YEAR);
+        assertDoesNotThrow(() -> future.get(1, TimeUnit.SECONDS));
+
+        // Verify
+        verify(raceRepository).save(argThat(savedRace -> 
+            savedRace.getResults().size() == 2 && // Should have both results
+            savedRace.getResults().stream()
+                .map(r -> r.getDriver().getDriverId())
+                .collect(Collectors.toSet())
+                .containsAll(Set.of("hamilton", "verstappen"))
+        ));
+    }
+
+    @Test
+    void saveRacesInDatabaseAsync_WithExistingRaceNoNewResults_DoesNotUpdate() {
+        // Create an existing race with one result
+        Race existingRace = Race.builder()
+                .season(TEST_YEAR)
+                .round(1)
+                .raceName("Test Race")
+                .results(new ArrayList<>())
+                .build();
+        
+        RaceResult existingResult = RaceResult.builder()
+                .driver(RaceResult.Driver.builder()
+                        .driverId("hamilton")
+                        .build())
+                .build();
+        existingRace.addResult(existingResult);
+
+        // Create a new race with the same result
+        Race newRace = Race.builder()
+                .season(TEST_YEAR)
+                .round(1)
+                .raceName("Test Race")
+                .results(new ArrayList<>())
+                .build();
+        
+        RaceResult sameResult = RaceResult.builder()
+                .driver(RaceResult.Driver.builder()
+                        .driverId("hamilton")
+                        .build())
+                .build();
+        newRace.addResult(sameResult);
+
+        when(raceRepository.findBySeasonAndRound(TEST_YEAR, 1)).thenReturn(Optional.of(existingRace));
+
+        // Execute
+        CompletableFuture<Void> future = ergastApiService.saveRacesInDatabaseAsync(List.of(newRace), TEST_YEAR);
+        assertDoesNotThrow(() -> future.get(1, TimeUnit.SECONDS));
+
+        // Verify that save was never called since there were no new results
+        verify(raceRepository, never()).save(any(Race.class));
+    }
+
+    @Test
+    void saveRacesInDatabaseAsync_WithMultipleRaces_HandlesEachCorrectly() {
+        // Create two races: one existing and one new
+        Race existingRace = Race.builder()
+                .season(TEST_YEAR)
+                .round(1)
+                .raceName("Race 1")
+                .results(new ArrayList<>())
+                .build();
+        existingRace.addResult(RaceResult.builder()
+                .driver(RaceResult.Driver.builder()
+                        .driverId("hamilton")
+                        .build())
+                .build());
+
+        Race newRace = Race.builder()
+                .season(TEST_YEAR)
+                .round(2)
+                .raceName("Race 2")
+                .results(new ArrayList<>())
+                .build();
+        newRace.addResult(RaceResult.builder()
+                .driver(RaceResult.Driver.builder()
+                        .driverId("verstappen")
+                        .build())
+                .build());
+
+        when(raceRepository.findBySeasonAndRound(TEST_YEAR, 1))
+                .thenReturn(Optional.of(existingRace));
+        when(raceRepository.findBySeasonAndRound(TEST_YEAR, 2))
+                .thenReturn(Optional.empty());
+        when(raceRepository.save(any(Race.class)))
+                .thenAnswer(i -> i.getArgument(0));
+
+        // Execute
+        CompletableFuture<Void> future = ergastApiService.saveRacesInDatabaseAsync(
+                List.of(existingRace, newRace), 
+                TEST_YEAR
+        );
+        assertDoesNotThrow(() -> future.get(1, TimeUnit.SECONDS));
+
+        // Verify that only the new race was saved
+        verify(raceRepository, times(1)).save(argThat(race -> 
+            race.getRound() == 2 && 
+            race.getRaceName().equals("Race 2")
+        ));
     }
 
     private ErgastRaceResponse createRaceResponse(ErgastRaceResponse.RaceData... races) {
