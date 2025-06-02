@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -157,6 +158,23 @@ class GlobalExceptionHandlerTest {
         assertEquals("External API service error", response.getBody().getMessage());
         assertEquals("EXTERNAL_API_ERROR", response.getBody().getCode());
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), response.getBody().getStatus());
+    }
+
+    @Test
+    void handleNoHandlerFoundExceptionn_ShouldReturnNotFoundError() {
+        // Arrange
+        NoHandlerFoundException exception = new NoHandlerFoundException("Path not found", "/", null);
+
+        // Act
+        ResponseEntity<ApiError> response = exceptionHandler.handleNoHandlerFoundException(exception, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Resource not found", response.getBody().getMessage());
+        assertEquals("NOT_FOUND", response.getBody().getCode());
+        assertEquals(HttpStatus.NOT_FOUND.value(), response.getBody().getStatus());
     }
 
     @Test

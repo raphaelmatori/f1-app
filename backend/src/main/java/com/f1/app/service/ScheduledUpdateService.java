@@ -7,6 +7,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 
 import com.f1.app.model.SeasonInfo;
 import com.f1.app.repository.SeasonInfoRepository;
@@ -28,17 +29,28 @@ public class ScheduledUpdateService {
     public void scheduledTasks() {
         log.info("Running weekly scheduled tasks");
         
-        // Only evict cache for current year as that's the only data that might change
-        int currentYear = Year.now().getValue();
-        raceService.evictRaceCache(currentYear);
-        
-        updateChampions();
-        updateLastRaceInfo();
+        try {
+            // Only evict cache for current year as that's the only data that might change
+            int currentYear = Year.now().getValue();
+            raceService.evictRaceCache(currentYear);
+
+            updateChampions();
+            updateLastRaceInfo();
+        } catch (Exception e) {
+            log.error("Error while running weekly scheduled tasks");
+        }
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() {
-        scheduledTasks();
+        try {
+            Thread.sleep(1000);
+            scheduledTasks();
+        } catch (Exception e) {
+            log.error("Not able to complete scheduled tasks during startup");
+
+        }
+
     }
 
     private void updateChampions() {
