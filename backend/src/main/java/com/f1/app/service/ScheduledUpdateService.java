@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.Year;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,6 +25,7 @@ public class ScheduledUpdateService {
     private final ErgastApiService ergastApiService;
     private final SeasonInfoRepository seasonInfoRepository;
     private final RaceService raceService;
+    private final CacheManager cacheManager;
 
     @Value("${api.ergast.baseUrl}")
     private String baseUrl;
@@ -34,13 +36,15 @@ public class ScheduledUpdateService {
         log.info("Running weekly scheduled tasks");
         
         try {
-            // Only evict cache for current year as that's the only data that might change
+            // Only update/evict cache for current year as that's the only data that might change
             int currentYear = Year.now().getValue();
-            raceService.evictRaceCache(currentYear);
 
             updateChampions();
             ergastApiService.fetchAndSaveRaces(currentYear, baseUrl);
             updateLastRaceInfo();
+
+            raceService.evictRaceCache(currentYear);
+            cacheManager.getCache("races").evict(currentYear);
         } catch (Exception e) {
             log.error("Error while running weekly scheduled tasks");
         }
