@@ -3,11 +3,11 @@ package com.f1.app.service;
 import java.time.LocalDate;
 import java.time.Year;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 
 import com.f1.app.model.SeasonInfo;
 import com.f1.app.repository.SeasonInfoRepository;
@@ -25,6 +25,10 @@ public class ScheduledUpdateService {
     private final SeasonInfoRepository seasonInfoRepository;
     private final RaceService raceService;
 
+    @Value("${api.ergast.baseUrl}")
+    private String baseUrl;
+
+
     @Scheduled(cron = "0 0 0 * * 1") // Run at midnight every Monday (0 0 0 = midnight, 1 = Monday)
     public void scheduledTasks() {
         log.info("Running weekly scheduled tasks");
@@ -35,6 +39,7 @@ public class ScheduledUpdateService {
             raceService.evictRaceCache(currentYear);
 
             updateChampions();
+            ergastApiService.fetchAndSaveRaces(currentYear, baseUrl);
             updateLastRaceInfo();
         } catch (Exception e) {
             log.error("Error while running weekly scheduled tasks");

@@ -15,7 +15,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import com.f1.app.dto.ErgastChampionResponse;
@@ -35,157 +35,140 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class ErgastApiService {
-    private static final int MAX_RETRIES = 3;
+    private static final int MAX_RETRIES = 5;
     private static final long INITIAL_RETRY_DELAY = 1000L;
     private final RestTemplate restTemplate;
     private final ChampionRepository championRepository;
     private final RaceRepository raceRepository;
     private final CacheService cacheService;
-    
+
     @Value("${api.ergast.baseUrl}")
     private String baseUrl;
 
     @Retryable(
-            value = {RestClientException.class},
+            value = { HttpClientErrorException.TooManyRequests.class },
             maxAttempts = MAX_RETRIES,
-            backoff = @Backoff(delay = INITIAL_RETRY_DELAY, multiplier = 2)
+            backoff = @Backoff(delay = INITIAL_RETRY_DELAY, multiplier = 2, maxDelay = 15000)
     )
     public ResponseEntity<Champion> fetchWorldChampion(Integer year) {
         String url = String.format("%s/%d/driverstandings/1.json", baseUrl, year);
-        log.info("Fetching world champion for year: {} (attempt {})", year, 1);
+        log.info("Fetching world champion for year: {}", year);
 
-        try {
-            ErgastChampionResponse response = restTemplate.getForObject(url, ErgastChampionResponse.class);
-            if (response != null && response.getMrData() != null && response.getMrData().getStandingsTable() != null) {
-                ErgastChampionResponse.StandingsList[] standingsLists = response.getMrData().getStandingsTable().getStandingsLists();
-                if (standingsLists != null && standingsLists.length > 0) {
-                    ErgastChampionResponse.DriverStanding[] driverStandings = standingsLists[0].getDriverStandings();
-                    if (driverStandings != null && driverStandings.length > 0) {
-                        ErgastChampionResponse.Driver driver = driverStandings[0].getDriver();
-                        Champion champion = new Champion(
-                                year,
-                                driver.getDriverId(),
-                                driver.getCode(),
-                                driver.getGivenName(),
-                                driver.getFamilyName(),
-                                driver.getNationality(),
-                                Float.parseFloat(driverStandings[0].getPoints()),
-                                Integer.parseInt(driverStandings[0].getWins())
-                        );
+        ErgastChampionResponse response = restTemplate.getForObject(url, ErgastChampionResponse.class);
+        if (response != null && response.getMrData() != null && response.getMrData().getStandingsTable() != null) {
+            ErgastChampionResponse.StandingsList[] standingsLists = response.getMrData().getStandingsTable().getStandingsLists();
+            if (standingsLists != null && standingsLists.length > 0) {
+                ErgastChampionResponse.DriverStanding[] driverStandings = standingsLists[0].getDriverStandings();
+                if (driverStandings != null && driverStandings.length > 0) {
+                    ErgastChampionResponse.Driver driver = driverStandings[0].getDriver();
+                    Champion champion = new Champion(
+                            year,
+                            driver.getDriverId(),
+                            driver.getCode(),
+                            driver.getGivenName(),
+                            driver.getFamilyName(),
+                            driver.getNationality(),
+                            Float.parseFloat(driverStandings[0].getPoints()),
+                            Integer.parseInt(driverStandings[0].getWins())
+                    );
 
-                        Champion savedChampion = championRepository.save(champion);
-                        log.info("Successfully saved champion for year: {}", year);
-                        return ResponseEntity.ok(savedChampion);
-                    }
+                    Champion savedChampion = championRepository.save(champion);
+                    log.info("Successfully saved champion for year: {}", year);
+                    return ResponseEntity.ok(savedChampion);
                 }
             }
-            log.warn("No champion data found for year: {}", year);
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("Error fetching champion for year {}: {}", year, e.getMessage());
-            throw new RestClientException("Failed to fetch champion data", e);
         }
+        log.warn("No champion data found for year: {}", year);
+        return ResponseEntity.notFound().build();
     }
 
     @Retryable(
-            value = {RestClientException.class},
+            value = { HttpClientErrorException.TooManyRequests.class },
             maxAttempts = MAX_RETRIES,
-            backoff = @Backoff(delay = INITIAL_RETRY_DELAY, multiplier = 2)
+            backoff = @Backoff(delay = INITIAL_RETRY_DELAY, multiplier = 2, maxDelay = 15000)
     )
     public List<RaceDTO> fetchAndSaveRaces(Integer year, String baseUrl) {
         List<Race> allRaces = new ArrayList<>();
         int offset = 0;
         int total = 0;
 
-        try {
-            do {
-                String url = String.format("%s/%d/results.json?limit=100&offset=%d", baseUrl, year, offset);
-                log.info("Fetching races for year: {} (offset: {})", year, offset);
+        do {
+            String url = String.format("%s/%d/results.json?limit=100&offset=%d", baseUrl, year, offset);
+            log.info("Fetching races for year: {} (offset: {})", year, offset);
 
-                ResponseEntity<ErgastRaceResponse> response = restTemplate.getForEntity(url, ErgastRaceResponse.class);
-                if (response.getBody() == null || response.getBody().getMrData() == null) {
-                    throw new ServiceException(
+            ResponseEntity<ErgastRaceResponse> response = restTemplate.getForEntity(url, ErgastRaceResponse.class);
+            if (response.getBody() == null || response.getBody().getMrData() == null) {
+                throw new ServiceException(
                         "Failed to fetch races",
                         "RACES_FETCH_ERROR",
                         HttpStatus.INTERNAL_SERVER_ERROR.value()
-                    );
-                }
-
-                ErgastRaceResponse.MRData mrData = response.getBody().getMrData();
-                if (mrData.getRaceTable() == null) {
-                    throw new ServiceException(
-                        "Failed to fetch races",
-                        "RACES_FETCH_ERROR",
-                        HttpStatus.INTERNAL_SERVER_ERROR.value()
-                    );
-                }
-
-                total = Integer.parseInt(mrData.getTotal());
-
-                if (mrData.getRaceTable().getRaces() != null) {
-                    List<Race> races = mrData.getRaceTable().getRaces()
-                            .stream()
-                            .map(this::mapToRace)
-                            .filter(race -> race != null)
-                            .collect(Collectors.toList());
-
-                    // Merge races with existing ones if they exist
-                    for (Race newRace : races) {
-                        Optional<Race> existingRace = allRaces.stream()
-                                .filter(race -> race.getRound().equals(newRace.getRound()))
-                                .findFirst();
-
-                        if (existingRace.isPresent()) {
-                            Race race = existingRace.get();
-                            // Add all results from new race to existing race
-                            newRace.getResults().forEach(race::addResult);
-                        } else {
-                            allRaces.add(newRace);
-                        }
-                    }
-                }
-                offset += 100;
-            } while (offset < total);
-
-            if (allRaces.isEmpty()) {
-                log.warn("No races found for year {}", year);
-                return new ArrayList<>();
+                );
             }
 
-            try {
-                // Save races in database and wait for completion
-                saveRacesInDatabaseAsync(allRaces, year).get(5, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                log.error("Error saving races to database: {}", e.getMessage());
+            ErgastRaceResponse.MRData mrData = response.getBody().getMrData();
+            if (mrData.getRaceTable() == null) {
                 throw new ServiceException(
+                        "Failed to fetch races",
+                        "RACES_FETCH_ERROR",
+                        HttpStatus.INTERNAL_SERVER_ERROR.value()
+                );
+            }
+
+            total = Integer.parseInt(mrData.getTotal());
+
+            if (mrData.getRaceTable().getRaces() != null) {
+                List<Race> races = mrData.getRaceTable().getRaces()
+                        .stream()
+                        .map(this::mapToRace)
+                        .filter(race -> race != null)
+                        .collect(Collectors.toList());
+
+                // Merge races with existing ones if they exist
+                for (Race newRace : races) {
+                    Optional<Race> existingRace = allRaces.stream()
+                            .filter(race -> race.getRound().equals(newRace.getRound()))
+                            .findFirst();
+
+                    if (existingRace.isPresent()) {
+                        Race race = existingRace.get();
+                        // Add all results from new race to existing race
+                        newRace.getResults().forEach(race::addResult);
+                    } else {
+                        allRaces.add(newRace);
+                    }
+                }
+            }
+            offset += 100;
+        } while (offset < total);
+
+        if (allRaces.isEmpty()) {
+            log.warn("No races found for year {}", year);
+            return new ArrayList<>();
+        }
+
+        try {
+            // Save races in database and wait for completion
+            saveRacesInDatabaseAsync(allRaces, year).get(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Error saving races to database: {}", e.getMessage());
+            throw new ServiceException(
                     "Failed to save races to database",
                     "RACES_SAVE_ERROR",
                     HttpStatus.INTERNAL_SERVER_ERROR.value(),
                     e
-                );
-            }
-
-            // Convert to DTOs
-            List<RaceDTO> raceDTOs = allRaces.stream()
-                    .map(RaceDTO::fromEntity)
-                    .collect(Collectors.toList());
-
-            // Evict cache for this year before saving new data
-            cacheService.evictRaceCache(year);
-
-            return raceDTOs;
-        } catch (Exception e) {
-            log.error("Error fetching races for year {}: {}", year, e.getMessage());
-            if (e instanceof ServiceException) {
-                throw e;
-            }
-            throw new ServiceException(
-                "Failed to fetch races",
-                "RACES_FETCH_ERROR",
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                e
             );
         }
+
+        // Convert to DTOs
+        List<RaceDTO> raceDTOs = allRaces.stream()
+                .map(RaceDTO::fromEntity)
+                .collect(Collectors.toList());
+
+        // Evict cache for this year before saving new data
+        cacheService.evictRaceCache(year);
+
+        return raceDTOs;
+
     }
 
     @Async
@@ -193,9 +176,32 @@ public class ErgastApiService {
         return CompletableFuture.runAsync(() -> {
             List<Race> saved = new ArrayList<>();
             for (Race race : races) {
-                saved.add(raceRepository.save(race));
+                Optional<Race> existingRace = raceRepository.findBySeasonAndRound(year, race.getRound());
+                
+                if (existingRace.isPresent()) {
+                    Race existing = existingRace.get();
+                    // Only update if there are new results
+                    if (race.getResults() != null && !race.getResults().isEmpty()) {
+                        // Get new results that don't exist in the current race
+                        List<RaceResult> newResults = race.getResults().stream()
+                            .filter(newResult -> !existing.getResults().stream()
+                                .anyMatch(existingResult -> 
+                                    existingResult.getDriver().getDriverId().equals(newResult.getDriver().getDriverId())))
+                            .collect(Collectors.toList());
+                        
+                        // Only save if we actually have new results
+                        if (!newResults.isEmpty()) {
+                            // Add only new results to the existing race
+                            newResults.forEach(existing::addResult);
+                            saved.add(raceRepository.save(existing));
+                        }
+                    }
+                } else {
+                    // This is a new race, save it
+                    saved.add(raceRepository.save(race));
+                }
             }
-            log.info("Saved {} races for year {}", saved.size(), year);
+            log.info("Processed {} races for year {}, {} were new or updated", races.size(), year, saved.size());
         });
     }
 
@@ -277,16 +283,16 @@ public class ErgastApiService {
         String url = String.format("%s/%d.json?limit=100", baseUrl, year);
         ResponseEntity<ErgastRaceResponse> response = restTemplate.getForEntity(url, ErgastRaceResponse.class);
 
-        if (response.getBody() == null || response.getBody().getMrData() == null 
-            || response.getBody().getMrData().getRaceTable() == null 
-            || response.getBody().getMrData().getRaceTable().getRaces() == null
-            || response.getBody().getMrData().getRaceTable().getRaces().isEmpty()) {
+        if (response.getBody() == null || response.getBody().getMrData() == null
+                || response.getBody().getMrData().getRaceTable() == null
+                || response.getBody().getMrData().getRaceTable().getRaces() == null
+                || response.getBody().getMrData().getRaceTable().getRaces().isEmpty()) {
             return Optional.empty();
         }
 
         List<ErgastRaceResponse.RaceData> races = response.getBody().getMrData().getRaceTable().getRaces();
         return races.stream()
-            .max(Comparator.comparingInt(race -> Integer.parseInt(race.getRound())))
-            .map(this::mapToRace);
+                .max(Comparator.comparingInt(race -> Integer.parseInt(race.getRound())))
+                .map(this::mapToRace);
     }
 }
