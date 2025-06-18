@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions>
+    <!-- Ignoring for now, while we still awaiting for a new patch -->
+    <suppress>
+        <cve>CVE-2025-41234</cve>
+        <dependency>
+            <fileName>spring-web-6.2.7.jar</fileName>
+        </dependency>
+    </suppress>
+
+    <suppress>
+        <cve>CVE-2025-48988</cve>
+        <dependency>
+            <fileName>tomcat-embed-core-10.1.41.jar</fileName>
+        </dependency>
+    </suppress>
+
+    <suppress>
+        <cve>CVE-2025-49125</cve>
+        <dependency>
+            <fileName>tomcat-embed-core-10.1.41.jar</fileName>
+        </dependency>
+    </suppress>
+</suppressions>

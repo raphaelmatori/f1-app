@@ -3,7 +3,9 @@ name: Main Pipeline
 on:
   pull_request:
     branches: [ main ]
-    types: [closed]
+    types: [ closed ]
+  push:
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -56,11 +58,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
       - name: Restore node_modules cache
         uses: actions/cache@v3
         with:
           path: frontend/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Run npm install
+        working-directory: ./frontend
+        run: npm install
 
       - name: Run lint
         working-directory: ./frontend
@@ -71,6 +82,11 @@ jobs:
     needs: frontend-lint
     steps:
       - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
 
       - name: Restore node_modules cache
         uses: actions/cache@v3
@@ -135,25 +151,8 @@ jobs:
 
 
     # ───────────────────────────────────────────── BACKEND ─────────────────────────────────────────────
-
-  backend-install:
-    needs: [security-scan-backend]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
-          cache-dependency-path: backend/build.gradle
-      - name: Grant permission to gradlew
-        working-directory: ./backend
-        run: chmod +x gradlew
-
   backend-build:
-    needs: backend-install
+    needs: [security-scan-backend]
     runs-on: ubuntu-latest
     environment: f1-world-champions
     steps:
